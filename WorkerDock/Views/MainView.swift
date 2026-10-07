@@ -139,6 +139,7 @@ struct SidebarView: View {
                 } label: {
                     Icon("plus", size: 15)
                 }
+                .focusEffectDisabled()
             }
         }
     }

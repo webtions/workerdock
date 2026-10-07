@@ -18,6 +18,7 @@ final class AppModel {
     var selectedTab: DetailTab = .overview
     var showHidden = false
     private(set) var isScanning = false
+    private(set) var isDemo = ProcessInfo.processInfo.environment["WORKERDOCK_DEMO"] != nil
     private(set) var shellEnvLoaded = false
     private(set) var rawShellEnv: [String: String] = ShellEnvironment.fallback()
 
@@ -26,6 +27,49 @@ final class AppModel {
     @ObservationIgnored private var watcher: RootWatcher?
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var windowVisible = false
+
+    // MARK: - Demo (marketing screenshots)
+
+    func loadDemoState() {
+        var ps: [Project] = []
+        var infoMap: [String: ProjectInfo] = [:]
+        for e in DemoData.entries {
+            let path = (e.folder as NSString).expandingTildeInPath
+            var p = Project(path: path, configFile: e.config, name: e.name, rootPath: (path as NSString).deletingLastPathComponent)
+            p.port = e.port
+            ps.append(p)
+            var info = ProjectInfo()
+            info.configKind = ConfigParser.kind(forFile: e.config)
+            info.workerName = e.name
+            info.mainEntry = e.entry
+            info.compatibilityDate = e.date
+            info.bindings = e.bindings
+            info.varNames = e.vars
+            info.wranglerVersion = e.wrangler
+            info.packageManager = e.pm
+            info.detectedMode = e.mode
+            info.hasDevScript = e.mode != .wrangler
+            info.depsInstalled = true
+            info.nodeModulesPresent = true
+            info.pagesOutputDir = e.pages
+            info.framework = e.framework
+            info.cms = e.cms
+            infoMap[path] = info
+            let rt = runtime(path)
+            rt.status = e.status
+            if e.status == .running, let port = e.port {
+                rt.url = URL(string: "http://localhost:\(port)")
+                rt.memoryBytes = UInt64(e.memoryMB * 1_048_576)
+            }
+            for line in (e.name == "aurora-api" ? DemoData.aLogs : ["▶ ready", "[wrangler:info] Ready on http://localhost:\(e.port ?? 8787)"]) {
+                rt.log.append(line)
+            }
+        }
+        projects = ps
+        infos = infoMap
+        roots = ["~/Sites"]
+        selection = visibleProjects.first?.id
+    }
 
     // MARK: - Lifecycle
 
@@ -41,12 +85,16 @@ final class AppModel {
 
     func bootstrap() {
         Task {
-            rawShellEnv = await ShellEnvironment.resolve()
-            shellEnvLoaded = true
-            await refreshAllInfo()
-            await refreshExternal()
-            offerToStopOrphans()
-            updateWatcher()
+            if isDemo {
+                loadDemoState()
+            } else {
+                rawShellEnv = await ShellEnvironment.resolve()
+                shellEnvLoaded = true
+                await refreshAllInfo()
+                await refreshExternal()
+                offerToStopOrphans()
+                updateWatcher()
+            }
             // Debug hook: lets scripts exercise "Add Root Folder" without the file picker.
             let env = ProcessInfo.processInfo.environment
             if let root = env["WORKERDOCK_DEBUG_ADD_ROOT"] { roots.contains((root as NSString).standardizingPath) ? rescan() : addRoot(root) }
@@ -68,8 +116,14 @@ final class AppModel {
         if env["WORKERDOCK_DEBUG_ATTACH"] != nil { await startAsync(p.id) }
         try? await Task.sleep(nanoseconds: 4_000_000_000)
         guard let window = NSApp.windows.first(where: { $0.contentView != nil && $0.styleMask.contains(.titled) }) else { exit(2) }
-        window.setContentSize(NSSize(width: 1180, height: 780))
+        var size = NSSize(width: 1180, height: 780)
+        if let s = env["WORKERDOCK_DEBUG_SIZE"]?.split(separator: "x").compactMap({ Double($0) }), s.count == 2 { size = NSSize(width: s[0], height: s[1]) }
+        window.setContentSize(size)
+        window.center()
+        NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+        window.makeFirstResponder(nil)
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
         for tab in DetailTab.allCases {
             selectedTab = tab
             try? await Task.sleep(nanoseconds: 2_000_000_000)
@@ -158,6 +212,7 @@ final class AppModel {
     // MARK: - Registry
 
     private func saveRegistry() {
+        guard !isDemo else { return }
         Persistence.save(Registry(roots: roots, projects: projects), file: "registry.json")
     }
 
@@ -291,12 +346,13 @@ final class AppModel {
     }
 
     func refreshInfo(_ id: String) async {
-        guard let p = project(id) else { return }
+        guard !isDemo, let p = project(id) else { return }
         let info = await Task.detached(priority: .utility) { ProjectInspector.inspect(p) }.value
         applyInfos([(id, info)])
     }
 
     func refreshAllInfo() async {
+        guard !isDemo else { return }
         let snapshot = projects
         let results = await Task.detached(priority: .utility) {
             snapshot.map { ($0.id, ProjectInspector.inspect($0)) }
@@ -342,6 +398,7 @@ final class AppModel {
     }
 
     private func settingsChanged(old: AppSettings) {
+        guard !isDemo else { return }
         Persistence.save(settings, file: "settings.json")
         if old.watchRoots != settings.watchRoots { updateWatcher() }
     }
@@ -562,6 +619,7 @@ final class AppModel {
     // MARK: - External (terminal-started) processes
 
     func refreshExternal() async {
+        guard !isDemo else { return }
         let managed = Set(runtimes.values.compactMap { $0.managed ? $0.pid.map { pid_t($0) } : nil })
         let list = projects.map { (id: $0.id, path: $0.path, port: $0.port) }
         let found = await Task.detached(priority: .utility) {
@@ -711,6 +769,7 @@ final class AppModel {
     // MARK: - Memory (only called while the Overview tab is visible)
 
     func updateMemory(_ id: String) async {
+        guard !isDemo else { return }
         let rt = runtime(id)
         guard rt.status == .running || rt.status == .starting else { rt.memoryBytes = nil; return }
         let pid = rt.pid

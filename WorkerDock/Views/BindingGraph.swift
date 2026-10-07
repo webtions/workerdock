@@ -33,7 +33,7 @@ struct BindingGraph: View {
         if !varNames.isEmpty {
             list.append(Node(id: "vars", icon: "braces", color: Brand.muted, title: "Variables",
                              subtitle: varNames.prefix(4).joined(separator: ", ") + (varNames.count > 4 ? " +\(varNames.count - 4)" : ""),
-                             tag: "\(varNames.count) vars"))
+                             tag: varNames.count == 1 ? "1 var" : "\(varNames.count) vars"))
         }
         return list
     }

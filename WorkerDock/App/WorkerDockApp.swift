@@ -71,7 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         if ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_SNAPSHOT"] != nil {
-            NSApp.setActivationPolicy(.accessory)
+            NSApp.setActivationPolicy(ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_ACTIVE"] != nil ? .regular : .accessory)
         }
         if ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_START"] != nil {
             NSApp.setActivationPolicy(.prohibited)   // headless debug run: no window, no second app icon
