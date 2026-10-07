@@ -47,8 +47,28 @@ final class AppModel {
             offerToStopOrphans()
             updateWatcher()
             // Debug hook: lets scripts exercise "Add Root Folder" without the file picker.
-            if let root = ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_ADD_ROOT"] { roots.contains((root as NSString).standardizingPath) ? rescan() : addRoot(root) }
+            let env = ProcessInfo.processInfo.environment
+            if let root = env["WORKERDOCK_DEBUG_ADD_ROOT"] { roots.contains((root as NSString).standardizingPath) ? rescan() : addRoot(root) }
+            if let name = env["WORKERDOCK_DEBUG_START"], let out = env["WORKERDOCK_DEBUG_OUT"] { await debugStart(name: name, reportPath: out) }
         }
+    }
+
+    /// Debug hook (env-only): start a project by name, wait, write a status report, stop it, exit.
+    private func debugStart(name: String, reportPath: String) async {
+        for _ in 0..<120 where !projects.contains(where: { $0.name == name }) { try? await Task.sleep(nanoseconds: 500_000_000) }
+        guard let p = projects.first(where: { $0.name == name }) else {
+            try? "project not found".write(toFile: reportPath, atomically: true, encoding: .utf8); exit(1)
+        }
+        await refreshInfo(p.id)
+        await startAsync(p.id)
+        try? await Task.sleep(nanoseconds: 30_000_000_000)
+        let rt = runtime(p.id)
+        let links = quickLinks(p.id).map { $0.url(base: rt.url ?? URL(string: "http://none")!)?.absoluteString ?? "" }
+        let report = "mode: \(effectiveMode(p).title)\nstatus: \(rt.status.label)\nurl: \(rt.url?.absoluteString ?? "nil")\nlinks: \(links)\n--- log\n" + rt.log.lines.suffix(25).map(\.text).joined(separator: "\n")
+        try? report.write(toFile: reportPath, atomically: true, encoding: .utf8)
+        if rt.managed { await stopAsync(p.id) }   // never touch servers we merely attached to
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        exit(0)
     }
 
     func windowVisibilityChanged(_ visible: Bool) {
@@ -364,6 +384,8 @@ final class AppModel {
         rt.status = .starting
         rt.url = nil
         rt.external = false
+        rt.attachedPID = nil
+        rt.sawAlreadyRunning = false
         rt.log.append("▶ \(command)")
 
         do {
@@ -412,6 +434,20 @@ final class AppModel {
         let rt = runtime(id)
         guard !text.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         rt.log.append(text, isError: isErr)
+        if let (url, pid) = OutputParser.detectAlreadyRunning(in: text) {
+            // The tool refused to start a second server; adopt the one that's already up.
+            rt.url = url
+            rt.attachedPID = pid
+            rt.status = .running
+        }
+        switch OutputParser.detectAttachField(in: text) {
+        case .marker?: rt.sawAlreadyRunning = true
+        case .url(let u)? where rt.sawAlreadyRunning: rt.url = u
+        case .pid(let pid)? where rt.sawAlreadyRunning:
+            rt.attachedPID = pid
+            if rt.url != nil { rt.status = .running }
+        default: break
+        }
         if rt.url == nil, rt.status == .starting, let url = OutputParser.detectURL(in: text, mode: mode) {
             rt.url = url
             rt.status = .running
@@ -424,6 +460,15 @@ final class AppModel {
         rt.log.append("■ process exited (code \(code))")
         rt.managed = false
         rt.pid = nil
+        if let attached = rt.attachedPID, kill(pid_t(attached), 0) == 0 {
+            rt.log.append("↪ A dev server is already running (pid \(attached)); attached to it.")
+            rt.external = true
+            rt.externalPIDs = [attached]
+            rt.status = .running
+            removeRunning(id)
+            return
+        }
+        rt.attachedPID = nil
         rt.url = nil
         rt.memoryBytes = nil
         rt.status = (intentional || code == 0) ? .stopped : .error("Exited with code \(code)")
@@ -503,8 +548,11 @@ final class AppModel {
                 rt.externalPIDs = ext.pids
                 rt.status = .running
                 if let port = ext.port { rt.url = URL(string: "http://localhost:\(port)") }
+            } else if rt.external, rt.externalPIDs.contains(where: { kill(pid_t($0), 0) == 0 }) {
+                continue   // an attached server that isn't workerd-based is still alive
             } else if rt.external {
                 rt.external = false
+                rt.attachedPID = nil
                 rt.externalPIDs = []
                 rt.url = nil
                 rt.memoryBytes = nil
@@ -524,6 +572,7 @@ final class AppModel {
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let pids = rt.externalPIDs
         for pid in pids { kill(pid_t(pid), SIGTERM) }
+        rt.attachedPID = nil
         Task {
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             await refreshExternal()

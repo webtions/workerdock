@@ -48,6 +48,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.windows.forEach { $0.close() }
             return
         }
+        if ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_START"] != nil {
+            NSApp.setActivationPolicy(.prohibited)   // headless debug run: no window, no second app icon
+        }
         AppModel.shared.bootstrap()
     }
 

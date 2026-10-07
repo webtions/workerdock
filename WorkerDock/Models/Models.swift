@@ -265,6 +265,9 @@ final class ProjectRuntime {
     var externalPIDs: [Int32] = []
     var memoryBytes: UInt64?
     var installing = false
+    /// PID of a dev server that was already running when we tried to start (e.g. Astro's background server).
+    var attachedPID: Int32?
+    @ObservationIgnored var sawAlreadyRunning = false
     let log = LogBuffer()
 
     var port: Int? { url?.port }

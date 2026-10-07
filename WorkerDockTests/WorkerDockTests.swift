@@ -81,6 +81,30 @@ final class ParsingTests: XCTestCase {
         XCTAssertEqual(OutputParser.detectURL(in: "  ➜  Local:   http://localhost:5173/", mode: .vite)?.port, 5173)
     }
 
+    func testAstroAlreadyRunningLineIsParsed() {
+        let line = #"{"message":"Dev server already running at http://localhost:4321 (pid 35873)\n  Stop:   astro dev stop","level":"info"}"#
+        let r = OutputParser.detectAlreadyRunning(in: line)
+        XCTAssertEqual(r?.0.port, 4321)
+        XCTAssertEqual(r?.1, 35873)
+        XCTAssertNil(OutputParser.detectAlreadyRunning(in: "Ready on http://localhost:8787"))
+    }
+
+    func testAstroMultiLineRefusalIsParsed() {
+        XCTAssertEqual(OutputParser.detectAttachField(in: "Another astro dev server is already running."), .marker)
+        XCTAssertEqual(OutputParser.detectAttachField(in: "  URL:  http://localhost:4321"), .url(URL(string: "http://localhost:4321")!))
+        XCTAssertEqual(OutputParser.detectAttachField(in: "  PID:  35873"), .pid(35873))
+        XCTAssertNil(OutputParser.detectAttachField(in: "Ready on http://localhost:8787"))
+    }
+
+    func testAgentEnvironmentMarkersAreStripped() {
+        let base = ["PATH": "/usr/bin", "AI_AGENT": "claude", "CLAUDECODE": "1", "CLAUDE_CODE_ENTRYPOINT": "x",
+                    "ANTHROPIC_API_KEY": "keep-me", "HOME": "/Users/x"]
+        let env = ShellEnvironment.effective(base: base, nodePath: "")
+        XCTAssertNil(env["AI_AGENT"]); XCTAssertNil(env["CLAUDECODE"]); XCTAssertNil(env["CLAUDE_CODE_ENTRYPOINT"])
+        XCTAssertEqual(env["ANTHROPIC_API_KEY"], "keep-me")
+        XCTAssertEqual(env["HOME"], "/Users/x")
+    }
+
     func testLineSplitterHandlesPartialLines() {
         let s = LineSplitter()
         XCTAssertEqual(s.feed(Data("hel".utf8)), [])

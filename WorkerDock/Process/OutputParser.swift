@@ -20,6 +20,29 @@ enum OutputParser {
         return nil
     }
 
+    private static let alreadyRunning = try! NSRegularExpression(
+        pattern: "already running at (https?://[^\\s\\\\]+) \\(pid (\\d+)\\)")
+
+    /// e.g. Astro 7: `Dev server already running at http://localhost:4321 (pid 35873)`.
+    static func detectAlreadyRunning(in line: String) -> (URL, Int32)? {
+        guard let m = alreadyRunning.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)), m.numberOfRanges == 3,
+              let r1 = Range(m.range(at: 1), in: line), let r2 = Range(m.range(at: 2), in: line),
+              let url = normalize(String(line[r1])), let pid = Int32(line[r2]) else { return nil }
+        return (url, pid)
+    }
+
+    enum AttachField: Equatable { case marker, url(URL), pid(Int32) }
+    private static let urlField = try! NSRegularExpression(pattern: "^\\s*URL:\\s+(https?://\\S+)")
+    private static let pidField = try! NSRegularExpression(pattern: "^\\s*PID:\\s+(\\d+)")
+
+    /// Astro's multi-line refusal: "Another astro dev server is already running." then `URL:` and `PID:` lines.
+    static func detectAttachField(in line: String) -> AttachField? {
+        if line.contains("is already running") && !line.contains("(pid") { return .marker }
+        if let u = firstMatch(urlField, in: line), let url = normalize(u) { return .url(url) }
+        if let p = firstMatch(pidField, in: line), let pid = Int32(p) { return .pid(pid) }
+        return nil
+    }
+
     private static func firstMatch(_ re: NSRegularExpression, in s: String) -> String? {
         guard let m = re.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)),
               m.numberOfRanges > 1, let r = Range(m.range(at: 1), in: s) else { return nil }

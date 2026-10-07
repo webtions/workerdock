@@ -57,6 +57,17 @@ enum ShellEnvironment {
         return env
     }
 
+    private static let agentExactKeys: Set<String> = ["AI_AGENT", "CLAUDECODE", "CURSOR_AGENT", "GEMINI_CLI", "OPENCODE", "CODEX_SANDBOX"]
+    private static let agentPrefixes = ["CLAUDE_CODE", "CLAUDE_AGENT", "CLAUDE_PID", "CLAUDE_EFFORT", "CLAUDE_PREVIEW", "CODEX_"]
+
+    /// Newer tools (e.g. Astro 7's `astro dev`) detect AI-agent environment variables and silently switch to
+    /// background/JSON mode. Projects started from a GUI dev tool must behave like they do in a normal terminal.
+    static func stripAgentMarkers(_ env: inout [String: String]) {
+        for key in Array(env.keys) where agentExactKeys.contains(key) || agentPrefixes.contains(where: key.hasPrefix) {
+            env[key] = nil
+        }
+    }
+
     /// Cached shell env, plus overrides every spawned process should see.
     static func effective(base: [String: String], nodePath: String) -> [String: String] {
         var env = base
@@ -69,6 +80,7 @@ enum ShellEnvironment {
             }
             env["PATH"] = dir + ":" + (env["PATH"] ?? "")
         }
+        stripAgentMarkers(&env)
         env["NO_COLOR"] = "1"
         env["FORCE_COLOR"] = "0"
         env["TERM"] = "dumb"
