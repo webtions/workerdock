@@ -47,7 +47,7 @@ final class AppModel {
             offerToStopOrphans()
             updateWatcher()
             // Debug hook: lets scripts exercise "Add Root Folder" without the file picker.
-            if let root = ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_ADD_ROOT"] { addRoot(root) }
+            if let root = ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_ADD_ROOT"] { roots.contains((root as NSString).standardizingPath) ? rescan() : addRoot(root) }
         }
     }
 
