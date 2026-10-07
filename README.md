@@ -16,6 +16,10 @@ A native macOS app (Swift + SwiftUI) for managing all your local Cloudflare Work
 
 It never writes to your project folders (except when you press **Install** for missing dependencies), never modifies wrangler config, and never shows `vars` or `.dev.vars` values.
 
+## Design
+
+Colours come from the Webtions / SVG Ready design tokens (cream `#FFFDF9` and near-black `#0A0A0A` backgrounds, coral accent `#FF3253`, amber `#FFB500` highlight in dark mode) and follow the system light/dark setting. Icons are [Lucide](https://lucide.dev) (ISC licence, see `WorkerDock/Resources/LUCIDE-LICENSE.txt`), bundled as vector assets. The bindings diagram on the Overview tab mirrors Cloudflare's Worker-to-resources view, and its connections animate while a project runs. The app icon is drawn in code (`AppIconArt.swift`); the 1024px master is in `tools/icon/`.
+
 ## Requirements
 
 - macOS 14+, Xcode 15+ (developed on Xcode 26)

@@ -12,7 +12,8 @@ struct WorkerDockApp: App {
                 .environment(model)
                 .frame(minWidth: 820, minHeight: 520)
         }
-        .defaultSize(width: 1040, height: 680)
+        .defaultSize(width: 1120, height: 740)
+        .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
             CommandMenu("Project") {
                 Button("Start") { if let id = model.selection { model.start(id) } }
@@ -30,7 +31,11 @@ struct WorkerDockApp: App {
         MenuBarExtra {
             MenuBarContent().environment(model)
         } label: {
-            Image(systemName: model.runningCount > 0 ? "shippingbox.fill" : "shippingbox")
+            Image(model.runningCount > 0 ? "lucide-cloud-cog" : "lucide-cloud")
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 17, height: 17)
         }
 
         Settings {
@@ -47,6 +52,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.setActivationPolicy(.prohibited)
             NSApp.windows.forEach { $0.close() }
             return
+        }
+        if let dir = ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_ICON"] {
+            NSApp.setActivationPolicy(.prohibited)
+            Task { @MainActor in
+                try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+                let renderer = ImageRenderer(content: AppIconArt())
+                renderer.scale = 1
+                renderer.isOpaque = false
+                if let cg = renderer.cgImage {
+                    let rep = NSBitmapImageRep(cgImage: cg)
+                    try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir + "/icon-1024.png"))
+                } else {
+                    try? "render failed".write(toFile: dir + "/error.txt", atomically: true, encoding: .utf8)
+                }
+                exit(0)
+            }
+            return
+        }
+        if ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_SNAPSHOT"] != nil {
+            NSApp.setActivationPolicy(.accessory)
         }
         if ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_START"] != nil {
             NSApp.setActivationPolicy(.prohibited)   // headless debug run: no window, no second app icon

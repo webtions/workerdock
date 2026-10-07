@@ -15,6 +15,7 @@ final class AppModel {
     // Derived / transient
     private(set) var infos: [String: ProjectInfo] = [:]
     var selection: String?
+    var selectedTab: DetailTab = .overview
     var showHidden = false
     private(set) var isScanning = false
     private(set) var shellEnvLoaded = false
@@ -50,7 +51,34 @@ final class AppModel {
             let env = ProcessInfo.processInfo.environment
             if let root = env["WORKERDOCK_DEBUG_ADD_ROOT"] { roots.contains((root as NSString).standardizingPath) ? rescan() : addRoot(root) }
             if let name = env["WORKERDOCK_DEBUG_START"], let out = env["WORKERDOCK_DEBUG_OUT"] { await debugStart(name: name, reportPath: out) }
+            if let dir = env["WORKERDOCK_DEBUG_SNAPSHOT"] { await debugSnapshot(dir: dir, env: env) }
         }
+    }
+
+    /// Debug hook (env-only): render each tab of the window to PNG files, for visual checks.
+    private func debugSnapshot(dir: String, env: [String: String]) async {
+        try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        let dark = env["WORKERDOCK_DEBUG_SCHEME"] == "dark"
+        NSApp.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        let name = env["WORKERDOCK_DEBUG_PROJECT"] ?? ""
+        for _ in 0..<120 where !projects.contains(where: { $0.name == name }) { try? await Task.sleep(nanoseconds: 500_000_000) }
+        guard let p = projects.first(where: { $0.name == name }) else { exit(1) }
+        selection = p.id
+        await refreshInfo(p.id)
+        if env["WORKERDOCK_DEBUG_ATTACH"] != nil { await startAsync(p.id) }
+        try? await Task.sleep(nanoseconds: 4_000_000_000)
+        guard let window = NSApp.windows.first(where: { $0.contentView != nil && $0.styleMask.contains(.titled) }) else { exit(2) }
+        window.setContentSize(NSSize(width: 1180, height: 780))
+        window.makeKeyAndOrderFront(nil)
+        for tab in DetailTab.allCases {
+            selectedTab = tab
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard let view = window.contentView?.superview ?? window.contentView,
+                  let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { continue }
+            view.cacheDisplay(in: view.bounds, to: rep)
+            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "\(dir)/\(dark ? "dark" : "light")-\(tab.rawValue.lowercased()).png"))
+        }
+        exit(0)
     }
 
     /// Debug hook (env-only): start a project by name, wait, write a status report, stop it, exit.
