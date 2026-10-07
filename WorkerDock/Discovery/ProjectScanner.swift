@@ -7,7 +7,7 @@ struct DiscoveredConfig: Hashable {
 
 enum ProjectScanner {
     static let configNames = ["wrangler.jsonc", "wrangler.json", "wrangler.toml"]   // priority order
-    static let skipped: Set<String> = ["node_modules", ".wrangler", ".git", "dist", ".output", ".next"]
+    static let skipped: Set<String> = ["node_modules", ".wrangler", ".git", "dist", ".output", ".next", ".localflare"]
     static let maxDepth = 8
 
     /// Recursively finds wrangler configs under `root`. Read-only.
