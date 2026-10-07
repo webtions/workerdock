@@ -30,6 +30,7 @@ struct OverviewView: View {
                     row("Status", rt.status.label)
                     row("Run mode", model.effectiveMode(project).title + (project.runModeOverride == nil ? " (auto)" : ""))
                     if let fw = info?.framework { row("Framework", fw) }
+                    if let cms = info?.cms { row("CMS", cms) }
                     if info?.pagesOutputDir != nil { row("Cloudflare Pages", "output: \(info?.pagesOutputDir ?? "")") }
                     row("Package manager", info?.packageManager.rawValue ?? "—")
                     row("Wrangler", info?.wranglerVersion ?? (info == nil ? "—" : "not installed"))
@@ -39,6 +40,17 @@ struct OverviewView: View {
                     if rt.status.isActive {
                         row("Memory", rt.memoryBytes.map(Format.bytes) ?? "measuring…")
                         if rt.external { row("Started by", "outside \(AppInfo.name) (detected)") }
+                    }
+                }
+
+                if rt.status == .running, rt.url != nil {
+                    section("Quick links") {
+                        HStack {
+                            ForEach(model.quickLinks(project.id)) { link in
+                                Button { model.open(link, for: project.id) } label: { Label(link.title, systemImage: link.symbol) }
+                            }
+                            Button { model.openExplorer(project.id) } label: { Label("Open Explorer", systemImage: "cylinder.split.1x2") }
+                        }
                     }
                 }
 

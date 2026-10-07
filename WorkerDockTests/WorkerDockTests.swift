@@ -206,6 +206,23 @@ final class DiscoveryTests: XCTestCase {
         XCTAssertEqual(OutputParser.detectURL(in: "  ┃ Local    http://localhost:4321/", mode: .devScript)?.port, 4321)
     }
 
+    func testEmDashProjectGetsAdminLink() throws {
+        let fm = FileManager.default
+        let dir = root.appendingPathComponent("danang")
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        try "{\"name\":\"danang\",\"main\":\"./src/worker.ts\"}".write(to: dir.appendingPathComponent("wrangler.jsonc"), atomically: true, encoding: .utf8)
+        try "import emdash, { local } from 'emdash/astro';".write(to: dir.appendingPathComponent("astro.config.mjs"), atomically: true, encoding: .utf8)
+        try "{\"scripts\":{\"dev\":\"astro dev\"},\"dependencies\":{\"emdash\":\"^1.1.0\"}}".write(to: dir.appendingPathComponent("package.json"), atomically: true, encoding: .utf8)
+        let info = ProjectInspector.inspect(Project(path: dir.path, configFile: "wrangler.jsonc", name: "danang"))
+        XCTAssertEqual(info.cms, "EmDash")
+        XCTAssertEqual(info.framework, "Astro")
+        XCTAssertEqual(info.detectedMode, .devScript)
+        let links = ProjectLink.links(for: info)
+        XCTAssertEqual(links.map(\.path), ["/", "/_emdash/admin"])
+        XCTAssertEqual(links[1].url(base: URL(string: "http://localhost:4321/")!)?.absoluteString, "http://localhost:4321/_emdash/admin")
+        XCTAssertEqual(ProjectLink.links(for: nil).map(\.path), ["/"])
+    }
+
     func testOldWranglerShowsUpdateCommand() {
         let p = Project(path: root.appendingPathComponent("a").path, configFile: "wrangler.toml", name: "a")
         let info = ProjectInspector.inspect(p)

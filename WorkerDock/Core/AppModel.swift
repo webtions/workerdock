@@ -585,6 +585,13 @@ final class AppModel {
         if let url = runtime(id).url { NSWorkspace.shared.open(url) }
     }
 
+    func quickLinks(_ id: String) -> [ProjectLink] { ProjectLink.links(for: infos[id]) }
+
+    func open(_ link: ProjectLink, for id: String) {
+        guard let base = runtime(id).url, let url = link.url(base: base) else { return }
+        NSWorkspace.shared.open(url)
+    }
+
     func openExplorer(_ id: String) {
         if let url = runtime(id).explorerURL { NSWorkspace.shared.open(url) }
     }

@@ -51,6 +51,10 @@ struct ProjectMenu: View {
                 .disabled(rt.status != .running)
             Button("Open Explorer") { model.openExplorer(project.id) }
                 .disabled(rt.status != .running)
+            ForEach(model.quickLinks(project.id).filter { $0 != .site }) { link in
+                Button(link.title) { model.open(link, for: project.id) }
+                    .disabled(rt.status != .running)
+            }
         }
     }
 }

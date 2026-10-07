@@ -30,6 +30,15 @@ struct ActionsView: View {
                         Button { model.openExplorer(project.id) } label: { Label("Open Explorer", systemImage: "cylinder.split.1x2") }
                             .disabled(rt.status != .running)
                     }
+                    let extra = model.quickLinks(project.id).filter { $0 != .site }
+                    if !extra.isEmpty {
+                        HStack {
+                            ForEach(extra) { link in
+                                Button { model.open(link, for: project.id) } label: { Label(link.title, systemImage: link.symbol) }
+                                    .disabled(rt.status != .running)
+                            }
+                        }
+                    }
                     HStack {
                         Button { model.reveal(project.id) } label: { Label("Reveal in Finder", systemImage: "folder") }
                         Button { model.openInEditor(project.id) } label: { Label("Open in Editor", systemImage: "chevron.left.forwardslash.chevron.right") }

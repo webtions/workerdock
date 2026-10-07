@@ -184,6 +184,29 @@ struct ProjectInfo {
     var packageRoot: String?
     /// Nearest folder with a package.json (where `dev` scripts live).
     var scriptRoot: String?
+    /// Detected CMS (currently EmDash), which adds quick links such as its admin/login page.
+    var cms: String?
+}
+
+/// A shortcut to a page served by a running project.
+struct ProjectLink: Identifiable, Hashable {
+    var title: String
+    var path: String
+    var symbol: String
+    var id: String { path }
+
+    func url(base: URL) -> URL? {
+        URL(string: base.absoluteString.trimmingSuffix("/") + path)
+    }
+
+    static let site = ProjectLink(title: "Open Site", path: "/", symbol: "safari")
+    static let emdashAdmin = ProjectLink(title: "Open EmDash Admin (Login)", path: "/_emdash/admin", symbol: "person.badge.key")
+
+    static func links(for info: ProjectInfo?) -> [ProjectLink] {
+        var links = [ProjectLink.site]
+        if info?.cms == "EmDash" { links.append(.emdashAdmin) }
+        return links
+    }
 }
 
 // MARK: - Runtime state

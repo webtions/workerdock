@@ -54,6 +54,10 @@ struct ProjectDetailView: View {
                     .lineLimit(1).truncationMode(.middle)
             }
             Spacer()
+            if rt.status == .running, rt.url != nil, let admin = model.quickLinks(project.id).first(where: { $0 != .site }) {
+                Button { model.open(admin, for: project.id) } label: { Label(admin.title, systemImage: admin.symbol) }
+                    .buttonStyle(.bordered)
+            }
             if let url = rt.url, rt.status == .running {
                 Button {
                     model.openInBrowser(project.id)

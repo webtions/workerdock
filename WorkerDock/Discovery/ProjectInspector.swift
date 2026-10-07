@@ -31,6 +31,7 @@ enum ProjectInspector {
         let scriptDir = info.scriptRoot ?? dir
         info.hasDevScript = hasDevScript(dir: scriptDir)
         info.framework = detectFramework(dirs: [dir, scriptDir])
+        info.cms = detectCMS(dirs: [dir, scriptDir])
         info.nodeModulesPresent = ancestors(of: dir).contains {
             FileManager.default.fileExists(atPath: ($0 as NSString).appendingPathComponent("node_modules"))
         }
@@ -55,6 +56,26 @@ enum ProjectInspector {
         ("svelte.config", "SvelteKit"), ("remix.config", "Remix"), ("react-router.config", "React Router"),
         ("vitepress", "VitePress"), ("docusaurus.config", "Docusaurus"), ("gatsby-config", "Gatsby"),
     ]
+
+    /// EmDash (Astro-based CMS): the `emdash` package is a dependency, installed, or imported by the Astro config.
+    static func detectCMS(dirs: [String]) -> String? {
+        for d in dirs {
+            let fm = FileManager.default
+            if let data = fm.contents(atPath: (d as NSString).appendingPathComponent("package.json")),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                for key in ["dependencies", "devDependencies"] {
+                    if (json[key] as? [String: Any])?["emdash"] != nil { return "EmDash" }
+                }
+            }
+            if fm.fileExists(atPath: (d as NSString).appendingPathComponent("node_modules/emdash/package.json")) { return "EmDash" }
+            let files = (try? fm.contentsOfDirectory(atPath: d)) ?? []
+            for f in files where f.hasPrefix("astro.config") {
+                if let text = try? String(contentsOfFile: (d as NSString).appendingPathComponent(f), encoding: .utf8),
+                   text.contains("emdash/astro") { return "EmDash" }
+            }
+        }
+        return nil
+    }
 
     static func detectFramework(dirs: [String]) -> String? {
         for d in dirs {
