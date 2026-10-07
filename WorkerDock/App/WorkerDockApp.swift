@@ -41,6 +41,13 @@ struct WorkerDockApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // The unit-test runner launches a copy of the app as its host: keep it invisible
+        // and away from the user's real registry.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+            NSApp.setActivationPolicy(.prohibited)
+            NSApp.windows.forEach { $0.close() }
+            return
+        }
         AppModel.shared.bootstrap()
     }
 
