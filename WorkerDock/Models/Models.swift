@@ -1,0 +1,271 @@
+import Foundation
+import Observation
+
+enum AppInfo {
+    /// Single place to rename the app (also rename in project.yml).
+    static let name = "WorkerDock"
+    static let supportDirName = "WorkerDock"
+    static let minExplorerWrangler = SemVer("4.82.1")!
+    static let minExplorerVitePlugin = SemVer("1.32.0")!
+    static let explorerPath = "/cdn-cgi/explorer"
+}
+
+// MARK: - Versions
+
+struct SemVer: Comparable, CustomStringConvertible {
+    let parts: [Int]
+
+    init?(_ string: String) {
+        var s = string.trimmingCharacters(in: .whitespaces)
+        if s.hasPrefix("v") { s.removeFirst() }
+        let core = s.split(whereSeparator: { $0 == "-" || $0 == "+" }).first.map(String.init) ?? s
+        let nums = core.split(separator: ".").compactMap { Int($0) }
+        guard !nums.isEmpty else { return nil }
+        parts = nums + Array(repeating: 0, count: max(0, 3 - nums.count))
+    }
+
+    static func < (a: SemVer, b: SemVer) -> Bool {
+        for i in 0..<max(a.parts.count, b.parts.count) {
+            let x = i < a.parts.count ? a.parts[i] : 0
+            let y = i < b.parts.count ? b.parts[i] : 0
+            if x != y { return x < y }
+        }
+        return false
+    }
+
+    var description: String { parts.map(String.init).joined(separator: ".") }
+}
+
+// MARK: - Project model
+
+enum RunModeKind: String, Codable, CaseIterable, Identifiable {
+    case wrangler, vite, custom
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .wrangler: return "Plain Wrangler"
+        case .vite: return "Vite plugin"
+        case .custom: return "Custom command"
+        }
+    }
+}
+
+enum ConfigKind: String, Codable {
+    case toml, json, jsonc
+    var title: String {
+        switch self {
+        case .toml: return "TOML"
+        case .json: return "JSON"
+        case .jsonc: return "JSONC"
+        }
+    }
+}
+
+enum PackageManager: String, Codable, CaseIterable {
+    case npm, pnpm, yarn, bun
+
+    var execWrangler: String {
+        switch self {
+        case .npm: return "npx wrangler"
+        case .pnpm: return "pnpm exec wrangler"
+        case .yarn: return "yarn wrangler"
+        case .bun: return "bunx wrangler"
+        }
+    }
+    var runDev: String {
+        switch self {
+        case .npm: return "npm run dev"
+        case .pnpm: return "pnpm run dev"
+        case .yarn: return "yarn dev"
+        case .bun: return "bun run dev"
+        }
+    }
+    var install: String { "\(rawValue) install" }
+
+    func updateCommand(for package: String) -> String {
+        switch self {
+        case .npm: return "npm install -D \(package)@latest"
+        case .pnpm: return "pnpm add -D \(package)@latest"
+        case .yarn: return "yarn add -D \(package)@latest"
+        case .bun: return "bun add -d \(package)@latest"
+        }
+    }
+}
+
+struct Project: Codable, Identifiable, Hashable {
+    /// Folder path containing the wrangler config. Doubles as the stable id.
+    var path: String
+    var configFile: String
+    var name: String
+    /// Root folder this was discovered under; nil when added manually.
+    var rootPath: String?
+    var hidden: Bool = false
+    var port: Int?
+    var inspectorPort: Int?
+    var runModeOverride: RunModeKind?
+    var customCommand: String?
+
+    var id: String { path }
+    var url: URL { URL(fileURLWithPath: path) }
+}
+
+enum BindingKind: String, CaseIterable {
+    case d1, kv, r2, queue, durableObject, workflow, service
+    case ai, vectorize, hyperdrive, analytics, browser, assets, other
+
+    var title: String {
+        switch self {
+        case .d1: return "D1 databases"
+        case .kv: return "KV namespaces"
+        case .r2: return "R2 buckets"
+        case .queue: return "Queues"
+        case .durableObject: return "Durable Objects"
+        case .workflow: return "Workflows"
+        case .service: return "Service bindings"
+        case .ai: return "Workers AI"
+        case .vectorize: return "Vectorize"
+        case .hyperdrive: return "Hyperdrive"
+        case .analytics: return "Analytics Engine"
+        case .browser: return "Browser Rendering"
+        case .assets: return "Static assets"
+        case .other: return "Other"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .d1: return "cylinder.split.1x2"
+        case .kv: return "key"
+        case .r2: return "externaldrive"
+        case .queue: return "tray.full"
+        case .durableObject: return "cube"
+        case .workflow: return "arrow.triangle.branch"
+        case .service: return "link"
+        case .ai: return "sparkles"
+        case .vectorize: return "point.3.connected.trianglepath.dotted"
+        case .hyperdrive: return "bolt"
+        case .analytics: return "chart.bar"
+        case .browser: return "safari"
+        case .assets: return "photo.on.rectangle"
+        case .other: return "square.dashed"
+        }
+    }
+}
+
+struct WorkerBinding: Hashable, Identifiable {
+    var kind: BindingKind
+    var name: String
+    var detail: String?
+    var id: String { "\(kind.rawValue):\(name):\(detail ?? "")" }
+}
+
+struct ProjectInfo {
+    var configKind: ConfigKind = .jsonc
+    var workerName: String?
+    var mainEntry: String?
+    var compatibilityDate: String?
+    var bindings: [WorkerBinding] = []
+    /// Names only. Values are never read into memory.
+    var varNames: [String] = []
+    var parseError: String?
+    var wranglerVersion: String?
+    var vitePluginVersion: String?
+    var packageManager: PackageManager = .npm
+    var detectedMode: RunModeKind = .wrangler
+    var hasDevScript = false
+    var depsInstalled = false
+}
+
+// MARK: - Runtime state
+
+enum ProjectStatus: Equatable {
+    case stopped, starting, running
+    case error(String)
+
+    var isActive: Bool {
+        switch self {
+        case .starting, .running: return true
+        default: return false
+        }
+    }
+    var label: String {
+        switch self {
+        case .stopped: return "Stopped"
+        case .starting: return "Starting…"
+        case .running: return "Running"
+        case .error(let m): return "Error: \(m)"
+        }
+    }
+}
+
+struct LogLine: Identifiable, Hashable {
+    let id: Int
+    let text: String
+    let isError: Bool
+}
+
+@Observable
+final class LogBuffer {
+    static let capacity = 5000
+    private(set) var lines: [LogLine] = []
+    @ObservationIgnored private var nextID = 0
+
+    func append(_ text: String, isError: Bool = false) {
+        lines.append(LogLine(id: nextID, text: text, isError: isError))
+        nextID += 1
+        if lines.count > Self.capacity + 500 {
+            lines.removeFirst(lines.count - Self.capacity)
+        }
+    }
+
+    func clear() { lines.removeAll() }
+}
+
+@Observable
+final class ProjectRuntime {
+    var status: ProjectStatus = .stopped
+    var url: URL?
+    var pid: Int32?
+    /// True when WorkerDock spawned the process (vs. detected from a terminal).
+    var managed = false
+    var external = false
+    var externalPIDs: [Int32] = []
+    var memoryBytes: UInt64?
+    var installing = false
+    let log = LogBuffer()
+
+    var port: Int? { url?.port }
+    var explorerURL: URL? { url.flatMap { URL(string: $0.absoluteString.trimmingSuffix("/") + AppInfo.explorerPath) } }
+}
+
+extension String {
+    func trimmingSuffix(_ suffix: String) -> String {
+        hasSuffix(suffix) ? String(dropLast(suffix.count)) : self
+    }
+}
+
+// MARK: - Persisted files
+
+struct AppSettings: Codable, Equatable {
+    var editorCommand = "code"
+    var nodePath = ""
+    var watchRoots = false
+
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        editorCommand = try c.decodeIfPresent(String.self, forKey: .editorCommand) ?? "code"
+        nodePath = try c.decodeIfPresent(String.self, forKey: .nodePath) ?? ""
+        watchRoots = try c.decodeIfPresent(Bool.self, forKey: .watchRoots) ?? false
+    }
+}
+
+struct Registry: Codable {
+    var roots: [String] = []
+    var projects: [Project] = []
+}
+
+struct RunningRecord: Codable {
+    var projectID: String
+    var pid: Int32
+    var startSec: UInt64
+}

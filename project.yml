@@ -1,0 +1,67 @@
+name: WorkerDock
+options:
+  bundleIdPrefix: dev.workerdock
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    ENABLE_HARDENED_RUNTIME: YES
+    ENABLE_APP_SANDBOX: NO
+    DEVELOPMENT_TEAM: ""
+packages:
+  TOMLKit:
+    url: https://github.com/LebJe/TOMLKit
+    from: 0.6.0
+targets:
+  WorkerDock:
+    type: application
+    platform: macOS
+    sources:
+      - path: WorkerDock
+    dependencies:
+      - package: TOMLKit
+    info:
+      path: WorkerDock/Info.plist
+      properties:
+        CFBundleName: WorkerDock
+        CFBundleDisplayName: WorkerDock
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        LSMinimumSystemVersion: "14.0"
+        LSApplicationCategoryType: public.app-category.developer-tools
+        NSHumanReadableCopyright: "WorkerDock is an independent project and is not affiliated with or endorsed by Cloudflare."
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_NAME: WorkerDock
+        PRODUCT_BUNDLE_IDENTIFIER: dev.workerdock.app
+        GENERATE_INFOPLIST_FILE: NO
+  WorkerDockTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: WorkerDockTests
+    dependencies:
+      - target: WorkerDock
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.workerdock.tests
+        GENERATE_INFOPLIST_FILE: YES
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/WorkerDock.app/Contents/MacOS/WorkerDock"
+schemes:
+  WorkerDock:
+    build:
+      targets:
+        WorkerDock: all
+    test:
+      targets:
+        - WorkerDockTests
+    run:
+      config: Debug
