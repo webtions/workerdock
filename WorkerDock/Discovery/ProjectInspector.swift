@@ -15,6 +15,7 @@ enum ProjectInspector {
             info.workerName = parsed.workerName
             info.mainEntry = parsed.main
             info.compatibilityDate = parsed.compatibilityDate
+            info.pagesOutputDir = parsed.pagesOutputDir
             info.bindings = parsed.bindings
             info.varNames = parsed.varNames
         } catch {
@@ -28,8 +29,12 @@ enum ProjectInspector {
         info.vitePluginVersion = installedVersion(of: "@cloudflare/vite-plugin", from: dir)
         info.depsInstalled = info.wranglerVersion != nil
         let scriptDir = info.scriptRoot ?? dir
-        info.detectedMode = (usesVitePlugin(dir: dir) || usesVitePlugin(dir: scriptDir)) ? .vite : .wrangler
         info.hasDevScript = hasDevScript(dir: scriptDir)
+        info.framework = detectFramework(dirs: [dir, scriptDir])
+        info.nodeModulesPresent = ancestors(of: dir).contains {
+            FileManager.default.fileExists(atPath: ($0 as NSString).appendingPathComponent("node_modules"))
+        }
+        info.detectedMode = detectMode(info: info, dirs: [dir, scriptDir])
         return info
     }
 
@@ -43,6 +48,28 @@ enum ProjectInspector {
 
     static func nearestPackageJSONDir(from dir: String) -> String? {
         ancestors(of: dir).first { FileManager.default.fileExists(atPath: ($0 as NSString).appendingPathComponent("package.json")) }
+    }
+
+    static let frameworkConfigs: [(prefix: String, name: String)] = [
+        ("astro.config", "Astro"), ("nuxt.config", "Nuxt"), ("next.config", "Next.js"),
+        ("svelte.config", "SvelteKit"), ("remix.config", "Remix"), ("react-router.config", "React Router"),
+        ("vitepress", "VitePress"), ("docusaurus.config", "Docusaurus"), ("gatsby-config", "Gatsby"),
+    ]
+
+    static func detectFramework(dirs: [String]) -> String? {
+        for d in dirs {
+            let files = (try? FileManager.default.contentsOfDirectory(atPath: d)) ?? []
+            for f in frameworkConfigs where files.contains(where: { $0.hasPrefix(f.prefix) }) { return f.name }
+        }
+        return nil
+    }
+
+    /// Pages projects can't run under plain `wrangler dev`; framework sites should run their own dev script.
+    static func detectMode(info: ProjectInfo, dirs: [String]) -> RunModeKind {
+        if info.pagesOutputDir != nil { return info.hasDevScript ? .devScript : .pages }
+        if dirs.contains(where: usesVitePlugin) { return .vite }
+        if info.framework != nil && info.hasDevScript { return .devScript }
+        return .wrangler
     }
 
     static func detectPackageManager(from dir: String) -> PackageManager {

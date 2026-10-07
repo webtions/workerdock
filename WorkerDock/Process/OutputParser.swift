@@ -15,7 +15,7 @@ enum OutputParser {
     /// (vite, custom) fall back to the first localhost URL printed.
     static func detectURL(in line: String, mode: RunModeKind) -> URL? {
         if let u = firstMatch(ready, in: line) { return normalize(u) }
-        guard mode != .wrangler else { return nil }
+        guard mode != .wrangler, mode != .pages else { return nil }
         if let u = firstMatch(local, in: line) { return normalize(u) }
         return nil
     }

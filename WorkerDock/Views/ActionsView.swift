@@ -63,7 +63,7 @@ struct ActionsView: View {
                         .frame(maxWidth: 520)
                     }
 
-                    if mode == .wrangler {
+                    if mode == .wrangler || mode == .pages {
                         HStack {
                             Text("Port")
                             TextField("auto", text: $portText)

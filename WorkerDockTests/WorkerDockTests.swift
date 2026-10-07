@@ -174,6 +174,38 @@ final class DiscoveryTests: XCTestCase {
         XCTAssertTrue(info.scriptRoot?.hasSuffix("/mono/apps/api") == true)
     }
 
+    func testAstroPagesProjectRunsItsOwnDevScript() throws {
+        let fm = FileManager.default
+        let dir = root.appendingPathComponent("astro-pages")
+        try fm.createDirectory(at: dir.appendingPathComponent("node_modules/wrangler"), withIntermediateDirectories: true)
+        try "{\"version\":\"4.110.0\"}".write(to: dir.appendingPathComponent("node_modules/wrangler/package.json"), atomically: true, encoding: .utf8)
+        try "name = \"svgready\"\npages_build_output_dir = \"dist\"".write(to: dir.appendingPathComponent("wrangler.toml"), atomically: true, encoding: .utf8)
+        try "export default {}".write(to: dir.appendingPathComponent("astro.config.mjs"), atomically: true, encoding: .utf8)
+        try "{\"scripts\":{\"dev\":\"npm run build && wrangler pages dev dist\"}}".write(to: dir.appendingPathComponent("package.json"), atomically: true, encoding: .utf8)
+        var info = ProjectInspector.inspect(Project(path: dir.path, configFile: "wrangler.toml", name: "x"))
+        XCTAssertEqual(info.pagesOutputDir, "dist")
+        XCTAssertEqual(info.framework, "Astro")
+        XCTAssertEqual(info.detectedMode, .devScript)
+        XCTAssertTrue(info.nodeModulesPresent)
+
+        // Same project without a dev script falls back to `wrangler pages dev`.
+        try "{}".write(to: dir.appendingPathComponent("package.json"), atomically: true, encoding: .utf8)
+        info = ProjectInspector.inspect(Project(path: dir.path, configFile: "wrangler.toml", name: "x"))
+        XCTAssertEqual(info.detectedMode, .pages)
+    }
+
+    func testFrameworkSiteWithoutPagesUsesDevScript() throws {
+        let fm = FileManager.default
+        let dir = root.appendingPathComponent("astro-worker")
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        try "{\"name\":\"w\",\"main\":\"dist/_worker.js/index.js\"}".write(to: dir.appendingPathComponent("wrangler.jsonc"), atomically: true, encoding: .utf8)
+        try "export default {}".write(to: dir.appendingPathComponent("astro.config.ts"), atomically: true, encoding: .utf8)
+        try "{\"scripts\":{\"dev\":\"astro dev\"}}".write(to: dir.appendingPathComponent("package.json"), atomically: true, encoding: .utf8)
+        let info = ProjectInspector.inspect(Project(path: dir.path, configFile: "wrangler.jsonc", name: "w"))
+        XCTAssertEqual(info.detectedMode, .devScript)
+        XCTAssertEqual(OutputParser.detectURL(in: "  ┃ Local    http://localhost:4321/", mode: .devScript)?.port, 4321)
+    }
+
     func testOldWranglerShowsUpdateCommand() {
         let p = Project(path: root.appendingPathComponent("a").path, configFile: "wrangler.toml", name: "a")
         let info = ProjectInspector.inspect(p)

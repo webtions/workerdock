@@ -93,6 +93,16 @@ final class AppModel {
         ShellEnvironment.effective(base: rawShellEnv, nodePath: settings.nodePath)
     }
 
+    /// Wrangler-based modes need wrangler installed; script-based modes just need node_modules.
+    func depsReady(_ p: Project) -> Bool {
+        guard let info = infos[p.id] else { return false }
+        switch effectiveMode(p) {
+        case .wrangler, .pages: return info.depsInstalled
+        case .vite, .devScript: return info.nodeModulesPresent
+        case .custom: return true
+        }
+    }
+
     func effectiveMode(_ p: Project) -> RunModeKind {
         p.runModeOverride ?? infos[p.id]?.detectedMode ?? .wrangler
     }
@@ -311,12 +321,16 @@ final class AppModel {
         let mode = effectiveMode(p)
         let command: String
         switch mode {
-        case .wrangler, .vite:
-            guard info.depsInstalled else {
+        case .wrangler, .vite, .pages, .devScript:
+            guard depsReady(p) else {
                 rt.status = .error("Dependencies not installed")
                 return
             }
-            if mode == .wrangler {
+            if mode == .devScript && !info.hasDevScript {
+                rt.status = .error("No \"dev\" script in package.json")
+                return
+            }
+            if mode == .wrangler || mode == .pages {
                 let others = Set(projects.filter { $0.id != id }.flatMap { [$0.port, $0.inspectorPort].compactMap { $0 } })
                 var port = p.port ?? 0
                 if port == 0 || !PortAllocator.isFree(port) || others.contains(port) {
@@ -327,7 +341,12 @@ final class AppModel {
                     ip = PortAllocator.allocate(start: 9230, avoiding: others.union([port]))
                 }
                 update(id) { $0.port = port; $0.inspectorPort = ip }
-                command = "\(info.packageManager.execWrangler) dev --port \(port) --inspector-port \(ip)"
+                if mode == .pages {
+                    let dir = info.pagesOutputDir ?? "dist"
+                    command = "\(info.packageManager.execWrangler) pages dev \"\(dir)\" --port \(port) --inspector-port \(ip)"
+                } else {
+                    command = "\(info.packageManager.execWrangler) dev --port \(port) --inspector-port \(ip)"
+                }
             } else {
                 command = info.packageManager.runDev
             }
@@ -341,7 +360,7 @@ final class AppModel {
         }
 
         // `dev` scripts live in the nearest package.json, which may be above the wrangler config.
-        let runDir = (mode == .vite ? info.scriptRoot : nil) ?? p.path
+        let runDir = ((mode == .vite || mode == .devScript) ? info.scriptRoot : nil) ?? p.path
         rt.status = .starting
         rt.url = nil
         rt.external = false
@@ -396,7 +415,7 @@ final class AppModel {
         if rt.url == nil, rt.status == .starting, let url = OutputParser.detectURL(in: text, mode: mode) {
             rt.url = url
             rt.status = .running
-            if mode == .wrangler, let port = url.port { update(id) { $0.port = port } }
+            if mode == .wrangler || mode == .pages, let port = url.port { update(id) { $0.port = port } }
         }
     }
 
@@ -419,7 +438,7 @@ final class AppModel {
             let rt = self.runtime(id)
             guard rt.status == .starting, rt.pid == pid else { return }
             rt.status = .running
-            if mode == .wrangler, let port = self.project(id)?.port {
+            if mode == .wrangler || mode == .pages, let port = self.project(id)?.port {
                 rt.url = URL(string: "http://localhost:\(port)")
             }
         }

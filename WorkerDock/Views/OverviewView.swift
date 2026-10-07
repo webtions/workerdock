@@ -12,8 +12,8 @@ struct OverviewView: View {
             VStack(alignment: .leading, spacing: 22) {
                 if let info {
                     if let err = info.parseError { banner(err, symbol: "exclamationmark.triangle.fill", tint: .orange) }
-                    if !info.depsInstalled && model.effectiveMode(project) != .custom { installBanner(rt, info) }
-                    if case .error(let message) = rt.status, info.depsInstalled || message != "Dependencies not installed" {
+                    if !model.depsReady(project) { installBanner(rt, info) }
+                    if case .error(let message) = rt.status, model.depsReady(project) || message != "Dependencies not installed" {
                         banner(message, symbol: "xmark.octagon.fill", tint: .red)
                     }
                 }
@@ -29,6 +29,8 @@ struct OverviewView: View {
                 section("Runtime") {
                     row("Status", rt.status.label)
                     row("Run mode", model.effectiveMode(project).title + (project.runModeOverride == nil ? " (auto)" : ""))
+                    if let fw = info?.framework { row("Framework", fw) }
+                    if info?.pagesOutputDir != nil { row("Cloudflare Pages", "output: \(info?.pagesOutputDir ?? "")") }
                     row("Package manager", info?.packageManager.rawValue ?? "—")
                     row("Wrangler", info?.wranglerVersion ?? (info == nil ? "—" : "not installed"))
                     if let v = info?.vitePluginVersion { row("Vite plugin", v) }

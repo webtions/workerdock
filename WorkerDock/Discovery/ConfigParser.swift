@@ -5,6 +5,7 @@ struct ParsedConfig {
     var workerName: String?
     var main: String?
     var compatibilityDate: String?
+    var pagesOutputDir: String?
     var bindings: [WorkerBinding] = []
     var varNames: [String] = []
 }
@@ -104,6 +105,7 @@ enum ConfigParser {
         cfg.workerName = d["name"] as? String
         cfg.main = d["main"] as? String
         cfg.compatibilityDate = d["compatibility_date"] as? String
+        cfg.pagesOutputDir = d["pages_build_output_dir"] as? String
 
         func list(_ key: String) -> [[String: Any]] { (d[key] as? [[String: Any]]) ?? [] }
         func add(_ kind: BindingKind, _ name: String?, _ detail: String? = nil) {

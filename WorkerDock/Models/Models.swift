@@ -39,11 +39,13 @@ struct SemVer: Comparable, CustomStringConvertible {
 // MARK: - Project model
 
 enum RunModeKind: String, Codable, CaseIterable, Identifiable {
-    case wrangler, vite, custom
+    case wrangler, vite, custom, pages, devScript
     var id: String { rawValue }
     var title: String {
         switch self {
         case .wrangler: return "Plain Wrangler"
+        case .pages: return "Wrangler Pages"
+        case .devScript: return "Project dev script"
         case .vite: return "Vite plugin"
         case .custom: return "Custom command"
         }
@@ -173,6 +175,11 @@ struct ProjectInfo {
     var detectedMode: RunModeKind = .wrangler
     var hasDevScript = false
     var depsInstalled = false
+    var nodeModulesPresent = false
+    /// Set when the config has `pages_build_output_dir` (a Cloudflare Pages project).
+    var pagesOutputDir: String?
+    /// Detected web framework (Astro, Nuxt, Next.js, SvelteKit…), if any.
+    var framework: String?
     /// Folder holding the lockfile / workspace root (where installs should run); may be above the config folder.
     var packageRoot: String?
     /// Nearest folder with a package.json (where `dev` scripts live).
