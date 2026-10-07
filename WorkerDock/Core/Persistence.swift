@@ -3,6 +3,9 @@ import Foundation
 /// JSON files in ~/Library/Application Support/<app>/. Never touches project folders.
 enum Persistence {
     static var directory: URL {
+        if let override = ProcessInfo.processInfo.environment["WORKERDOCK_SUPPORT_DIR"] {   // used by tests
+            return URL(fileURLWithPath: override, isDirectory: true)
+        }
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return base.appendingPathComponent(AppInfo.supportDirName, isDirectory: true)
     }

@@ -5,7 +5,7 @@ import Observation
 @MainActor
 @Observable
 final class AppModel {
-    static let shared = AppModel()
+    static let shared = AppModel()   // tests create their own instances
 
     // Persisted
     var settings = AppSettings() { didSet { if settings != oldValue { settingsChanged(old: oldValue) } } }
@@ -28,7 +28,7 @@ final class AppModel {
 
     // MARK: - Lifecycle
 
-    private init() {
+    init() {
         if let s = Persistence.load(AppSettings.self, file: "settings.json") { settings = s }
         if let r = Persistence.load(Registry.self, file: "registry.json") {
             roots = r.roots
@@ -46,6 +46,8 @@ final class AppModel {
             await refreshExternal()
             offerToStopOrphans()
             updateWatcher()
+            // Debug hook: lets scripts exercise "Add Root Folder" without the file picker.
+            if let root = ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_ADD_ROOT"] { addRoot(root) }
         }
     }
 
@@ -77,7 +79,10 @@ final class AppModel {
     var visibleProjects: [Project] {
         projects
             .filter { showHidden || !$0.hidden }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            .sorted {
+                let c = $0.name.localizedCaseInsensitiveCompare($1.name)
+                return c == .orderedSame ? $0.path < $1.path : c == .orderedAscending
+            }
     }
 
     var hasHiddenProjects: Bool { projects.contains { $0.hidden } }
@@ -168,47 +173,69 @@ final class AppModel {
         isScanning = true
         let roots = self.roots
         Task {
-            let results = await Task.detached(priority: .utility) {
-                roots.map { root in (root, ProjectScanner.scan(root: root)) }
+            // Scan and inspect off the main thread, so projects appear already named and sorted.
+            let results = await Task.detached(priority: .utility) { () -> [(String, [(DiscoveredConfig, ProjectInfo)])] in
+                roots.map { root in
+                    (root, ProjectScanner.scan(root: root).map { c in
+                        let id = (c.dir as NSString).standardizingPath
+                        let stub = Project(path: id, configFile: c.file, name: (id as NSString).lastPathComponent, rootPath: root)
+                        return (c, ProjectInspector.inspect(stub))
+                    })
+                }
             }.value
             merge(results)
             isScanning = false
-            await refreshAllInfo()
             await refreshExternal()
         }
     }
 
-    private func merge(_ results: [(String, [DiscoveredConfig])]) {
+    private func merge(_ results: [(String, [(DiscoveredConfig, ProjectInfo)])]) {
         var seen = Set<String>()
+        var newProjects = projects
+        var newInfos = infos
         for (root, configs) in results {
-            for c in configs {
+            for (c, info) in configs {
                 let id = (c.dir as NSString).standardizingPath
                 seen.insert(id)
-                if let i = projects.firstIndex(where: { $0.id == id }) {
-                    projects[i].configFile = c.file
+                newInfos[id] = info
+                let name = info.workerName ?? (id as NSString).lastPathComponent
+                if let i = newProjects.firstIndex(where: { $0.id == id }) {
+                    newProjects[i].configFile = c.file
+                    newProjects[i].name = name
                 } else {
-                    projects.append(Project(path: id, configFile: c.file,
-                                            name: (id as NSString).lastPathComponent, rootPath: root))
-                    _ = runtime(id)
+                    newProjects.append(Project(path: id, configFile: c.file, name: name, rootPath: root))
                 }
             }
         }
         // Drop discovered projects whose config vanished (never manual ones).
         let scannedRoots = Set(results.map(\.0))
-        projects.removeAll { p in
+        newProjects.removeAll { p in
             guard let r = p.rootPath, scannedRoots.contains(r) else { return false }
-            let gone = !seen.contains(p.id)
-            if gone { runtimes[p.id] = nil; infos[p.id] = nil }
-            return gone
+            return !seen.contains(p.id)
         }
-        if selection == nil || project(selection!) == nil { selection = visibleProjects.first?.id }
+        let keep = Set(newProjects.map(\.id))
+        runtimes = runtimes.filter { keep.contains($0.key) }
+        for p in newProjects { _ = runtime(p.id) }
+        infos = newInfos.filter { keep.contains($0.key) }
+        projects = newProjects      // one mutation, so the sidebar updates once
         saveRegistry()
+        selectFirstIfNeeded()
+    }
+
+    /// Deferred a tick so the sidebar finishes inserting rows before selection changes.
+    private func selectFirstIfNeeded() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            guard let self else { return }
+            if self.selection == nil || self.project(self.selection!) == nil {
+                self.selection = self.visibleProjects.first?.id
+            }
+        }
     }
 
     func refreshInfo(_ id: String) async {
         guard let p = project(id) else { return }
         let info = await Task.detached(priority: .utility) { ProjectInspector.inspect(p) }.value
-        applyInfo(info, to: id)
+        applyInfos([(id, info)])
     }
 
     func refreshAllInfo() async {
@@ -216,14 +243,35 @@ final class AppModel {
         let results = await Task.detached(priority: .utility) {
             snapshot.map { ($0.id, ProjectInspector.inspect($0)) }
         }.value
-        for (id, info) in results { applyInfo(info, to: id) }
+        applyInfos(results)
     }
 
-    private func applyInfo(_ info: ProjectInfo, to id: String) {
-        infos[id] = info
-        if let name = info.workerName, let p = project(id), p.name != name {
-            update(id) { $0.name = name }
+    /// Applies inspection results in one batch. Many small mutations while the sidebar list
+    /// is updating make AppKit's table view complain about reentrancy.
+    private func applyInfos(_ results: [(String, ProjectInfo)]) {
+        var newInfos = infos
+        var newProjects = projects
+        var renamed = false
+        for (id, info) in results {
+            guard let i = newProjects.firstIndex(where: { $0.id == id }) else { continue }
+            newInfos[id] = info
+            if let name = info.workerName, newProjects[i].name != name {
+                newProjects[i].name = name
+                renamed = true
+            }
         }
+        infos = newInfos
+        if renamed {
+            projects = newProjects
+            saveRegistry()
+        }
+    }
+
+    /// Worker names aren't unique across folders; add the folder when two projects share one.
+    func displayName(_ p: Project) -> String {
+        guard projects.contains(where: { $0.id != p.id && $0.name == p.name }) else { return p.name }
+        let parts = p.path.split(separator: "/").suffix(2).joined(separator: "/")
+        return "\(p.name)  (\(parts))"
     }
 
     private func updateWatcher() {
@@ -292,6 +340,8 @@ final class AppModel {
             command = c
         }
 
+        // `dev` scripts live in the nearest package.json, which may be above the wrangler config.
+        let runDir = (mode == .vite ? info.scriptRoot : nil) ?? p.path
         rt.status = .starting
         rt.url = nil
         rt.external = false
@@ -299,7 +349,7 @@ final class AppModel {
 
         do {
             let pid = try await processManager.start(
-                id: id, command: command, cwd: p.path, env: environment,
+                id: id, command: command, cwd: runDir, env: environment,
                 onLine: { [weak self] text, isErr in
                     DispatchQueue.main.async { MainActor.assumeIsolated { self?.handleLine(id, text, isErr, mode: mode) } }
                 },
@@ -383,12 +433,13 @@ final class AppModel {
         guard !rt.installing else { return }
         rt.installing = true
         let command = info.packageManager.install
-        rt.log.append("▶ \(command)")
+        let installDir = info.packageRoot ?? p.path
+        rt.log.append("▶ \(command)  (in \(abbreviated(installDir)))")
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
             Task {
                 do {
                     _ = try await processManager.start(
-                        id: "install:\(id)", command: command, cwd: p.path, env: environment,
+                        id: "install:\(id)", command: command, cwd: installDir, env: environment,
                         onLine: { [weak self] text, isErr in
                             DispatchQueue.main.async {
                                 MainActor.assumeIsolated {

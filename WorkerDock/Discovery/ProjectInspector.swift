@@ -22,12 +22,27 @@ enum ProjectInspector {
         }
 
         info.packageManager = detectPackageManager(from: dir)
+        info.packageRoot = lockfileRoot(from: dir) ?? nearestPackageJSONDir(from: dir)
+        info.scriptRoot = nearestPackageJSONDir(from: dir)
         info.wranglerVersion = installedVersion(of: "wrangler", from: dir)
         info.vitePluginVersion = installedVersion(of: "@cloudflare/vite-plugin", from: dir)
         info.depsInstalled = info.wranglerVersion != nil
-        info.detectedMode = usesVitePlugin(dir: dir) ? .vite : .wrangler
-        info.hasDevScript = hasDevScript(dir: dir)
+        let scriptDir = info.scriptRoot ?? dir
+        info.detectedMode = (usesVitePlugin(dir: dir) || usesVitePlugin(dir: scriptDir)) ? .vite : .wrangler
+        info.hasDevScript = hasDevScript(dir: scriptDir)
         return info
+    }
+
+    static let lockfiles = ["pnpm-lock.yaml", "yarn.lock", "bun.lockb", "bun.lock", "package-lock.json"]
+
+    static func lockfileRoot(from dir: String) -> String? {
+        ancestors(of: dir).first { d in
+            lockfiles.contains { FileManager.default.fileExists(atPath: (d as NSString).appendingPathComponent($0)) }
+        }
+    }
+
+    static func nearestPackageJSONDir(from dir: String) -> String? {
+        ancestors(of: dir).first { FileManager.default.fileExists(atPath: ($0 as NSString).appendingPathComponent("package.json")) }
     }
 
     static func detectPackageManager(from dir: String) -> PackageManager {

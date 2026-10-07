@@ -105,7 +105,7 @@ struct SidebarRow: View {
         let rt = model.runtime(project.id)
         HStack(spacing: 8) {
             StatusDot(status: rt.status)
-            Text(project.name)
+            Text(model.displayName(project))
                 .lineLimit(1)
                 .foregroundStyle(project.hidden ? .secondary : .primary)
             Spacer(minLength: 4)

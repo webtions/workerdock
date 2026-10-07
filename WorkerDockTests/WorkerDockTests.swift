@@ -153,6 +153,27 @@ final class DiscoveryTests: XCTestCase {
         XCTAssertEqual(ExplorerSupport.evaluate(info: info, mode: .wrangler), .ok)
     }
 
+    func testConfigInSubfolderUsesParentPackageRoot() throws {
+        let fm = FileManager.default
+        let parent = root.appendingPathComponent("mono")
+        let sub = parent.appendingPathComponent("apps/api")
+        try fm.createDirectory(at: sub, withIntermediateDirectories: true)
+        try fm.createDirectory(at: parent.appendingPathComponent("node_modules/wrangler"), withIntermediateDirectories: true)
+        try "{\"version\":\"4.91.0\"}".write(to: parent.appendingPathComponent("node_modules/wrangler/package.json"), atomically: true, encoding: .utf8)
+        try "".write(to: parent.appendingPathComponent("yarn.lock"), atomically: true, encoding: .utf8)
+        try "{\"scripts\":{\"dev\":\"vite\"}}".write(to: sub.appendingPathComponent("package.json"), atomically: true, encoding: .utf8)
+        try "name = \"api\"".write(to: sub.appendingPathComponent("wrangler.toml"), atomically: true, encoding: .utf8)
+
+        let found = ProjectScanner.scan(root: root.path)
+        XCTAssertTrue(found.contains { $0.dir.hasSuffix("/mono/apps/api") })
+        let info = ProjectInspector.inspect(Project(path: sub.path, configFile: "wrangler.toml", name: "api"))
+        XCTAssertEqual(info.packageManager, .yarn)
+        XCTAssertEqual(info.wranglerVersion, "4.91.0")
+        XCTAssertTrue(info.depsInstalled)
+        XCTAssertTrue(info.packageRoot?.hasSuffix("/mono") == true)
+        XCTAssertTrue(info.scriptRoot?.hasSuffix("/mono/apps/api") == true)
+    }
+
     func testOldWranglerShowsUpdateCommand() {
         let p = Project(path: root.appendingPathComponent("a").path, configFile: "wrangler.toml", name: "a")
         let info = ProjectInspector.inspect(p)
@@ -242,7 +263,7 @@ final class ProcessTests: XCTestCase {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
         let fake = dir.appendingPathComponent("workerd")
-        try FileManager.default.copyItem(atPath: "/bin/sleep", toPath: fake.path)
+        try makeFakeWorkerd(at: fake)
 
         let p = Process()
         p.executableURL = fake
@@ -272,7 +293,101 @@ final class LockedBox<T>: @unchecked Sendable {
 func waitUntil(timeout: TimeInterval = 10, _ condition: () -> Bool) async throws {
     let end = Date().addingTimeInterval(timeout)
     while !condition() {
-        if Date() > end { throw XCTSkip("timed out waiting for condition") }
+        if Date() > end { struct Timeout: Error {}; XCTFail("timed out waiting for condition"); throw Timeout() }
         try await Task.sleep(nanoseconds: 50_000_000)
     }
+}
+
+@MainActor
+func waitUntilMain(timeout: TimeInterval = 15, line: UInt = #line, _ condition: () -> Bool) async throws {
+    let end = Date().addingTimeInterval(timeout)
+    while !condition() {
+        if Date() > end { struct Timeout: Error {}; XCTFail("timed out waiting for condition", line: line); throw Timeout() }
+        try await Task.sleep(nanoseconds: 50_000_000)
+    }
+}
+
+/// End-to-end: real AppModel + a fake `npx wrangler` (so nothing is installed or touched).
+@MainActor
+final class EndToEndTests: XCTestCase {
+    var tmp: URL!
+    var project: URL!
+
+    override func setUpWithError() throws {
+        let fm = FileManager.default
+        tmp = fm.temporaryDirectory.appendingPathComponent("wd-e2e-\(UUID().uuidString)")
+        let root = tmp.appendingPathComponent("sites")
+        project = root.appendingPathComponent("demo")
+        let shim = tmp.appendingPathComponent("shim")
+        let support = tmp.appendingPathComponent("support")
+        for d in [project.appendingPathComponent("node_modules/wrangler"), shim, support] {
+            try fm.createDirectory(at: d, withIntermediateDirectories: true)
+        }
+        try "{\"version\":\"4.90.0\"}".write(to: project.appendingPathComponent("node_modules/wrangler/package.json"), atomically: true, encoding: .utf8)
+        try "{}".write(to: project.appendingPathComponent("package-lock.json"), atomically: true, encoding: .utf8)
+        try "{ // demo\n \"name\": \"demo-worker\",\n \"vars\": {\"SECRET\": \"hunter2\"},\n \"kv_namespaces\": [{\"binding\": \"KV\"},],\n}"
+            .write(to: project.appendingPathComponent("wrangler.jsonc"), atomically: true, encoding: .utf8)
+
+        // Fake wrangler: `npx wrangler dev --port N --inspector-port M`
+        try makeFakeWorkerd(at: shim.appendingPathComponent("workerd"))
+        let script = """
+        #!/bin/sh
+        while [ $# -gt 0 ]; do [ "$1" = "--port" ] && PORT=$2; shift; done
+        echo "\\033[32m⛅️ wrangler 4.90.0\\033[0m"
+        echo "[wrangler:info] Ready on http://localhost:$PORT"
+        echo "something on stderr" >&2
+        exec "\(shim.path)/workerd" 600
+        """
+        let npx = shim.appendingPathComponent("npx")
+        try script.write(to: npx, atomically: true, encoding: .utf8)
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: npx.path)
+
+        setenv("WORKERDOCK_SUPPORT_DIR", support.path, 1)
+    }
+
+    override func tearDownWithError() throws {
+        unsetenv("WORKERDOCK_SUPPORT_DIR")
+        try? FileManager.default.removeItem(at: tmp)
+    }
+
+    private func snapshot() -> [String] {
+        let e = FileManager.default.enumerator(atPath: project.path)
+        return (e?.allObjects as? [String] ?? []).sorted()
+    }
+
+    func testMissingDependenciesBlocksStart() async throws {
+        let model = AppModel()
+        try FileManager.default.removeItem(at: project.appendingPathComponent("node_modules"))
+        model.addRoot(tmp.appendingPathComponent("sites").path)
+        try await waitUntilMain { model.projects.count == 1 && !model.isScanning }
+        await model.refreshAllInfo()
+        let p = model.projects[0]
+        XCTAssertFalse(model.info(p.id)!.depsInstalled)
+        await model.startAsync(p.id)
+        XCTAssertEqual(model.runtime(p.id).status, .error("Dependencies not installed"))
+    }
+
+    func testAddSingleProjectHideAndRemove() async throws {
+        let model = AppModel()
+        XCTAssertNotNil(model.addProjectFolder(tmp.path), "folder without config must be rejected")
+        XCTAssertNil(model.addProjectFolder(project.path))
+        XCTAssertEqual(model.projects.count, 1)
+        let id = model.projects[0].id
+        model.setHidden(id, true)
+        XCTAssertTrue(model.visibleProjects.isEmpty)
+        model.setHidden(id, false)
+        model.removeManual(id)
+        XCTAssertTrue(model.projects.isEmpty)
+    }
+}
+
+/// A copy of /bin/sleep named workerd. Copies lose their signature (and get killed on arm64), so re-sign ad hoc.
+func makeFakeWorkerd(at url: URL) throws {
+    try FileManager.default.copyItem(atPath: "/bin/sleep", toPath: url.path)
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+    p.arguments = ["-s", "-", "--force", url.path]
+    p.standardError = FileHandle.nullDevice
+    try p.run()
+    p.waitUntilExit()
 }

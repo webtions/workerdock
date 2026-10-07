@@ -173,6 +173,10 @@ struct ProjectInfo {
     var detectedMode: RunModeKind = .wrangler
     var hasDevScript = false
     var depsInstalled = false
+    /// Folder holding the lockfile / workspace root (where installs should run); may be above the config folder.
+    var packageRoot: String?
+    /// Nearest folder with a package.json (where `dev` scripts live).
+    var scriptRoot: String?
 }
 
 // MARK: - Runtime state
