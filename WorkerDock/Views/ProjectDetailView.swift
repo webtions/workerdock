@@ -77,14 +77,6 @@ struct ProjectDetailView: View {
                             .buttonStyle(.dockSecondaryCompact)
                             .help("Open the site in your browser")
                         }
-                        if rt.status.isActive, let bytes = rt.memoryBytes {
-                            HStack(spacing: 5) {
-                                Icon("memory-stick", size: IconSize.sm).foregroundStyle(Brand.muted)
-                                Text(Format.bytes(bytes)).font(.dBodyMedium).monospacedDigit()
-                                    .contentTransition(.numericText())
-                            }
-                            .help("Memory used by this project, including workerd")
-                        }
                         ForEach(extras) { badge in
                             HStack(spacing: 5) {
                                 KindIcon(badge: badge, size: 12)

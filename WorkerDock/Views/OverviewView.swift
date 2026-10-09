@@ -18,6 +18,10 @@ struct OverviewView: View {
                     }
                 }
 
+                if rt.status == .running {
+                    LiveStats(rt: rt).appearIn()
+                }
+
                 if let info {
                     BindingsSection(project: project, info: info, status: rt.status)
                         .appearIn(0.04)

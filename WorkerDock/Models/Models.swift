@@ -273,6 +273,10 @@ final class ProjectRuntime {
     var external = false
     var externalPIDs: [Int32] = []
     var memoryBytes: UInt64?
+    /// Recent memory samples in MB (one every few seconds), for the live chart.
+    var memoryHistory: [Double] = []
+    /// When the running process started, for uptime.
+    var startedAt: Date?
     /// PID of a dev server that was already running when we tried to start (e.g. Astro's background server).
     var attachedPID: Int32?
     @ObservationIgnored var sawAlreadyRunning = false
