@@ -14,7 +14,7 @@ A native macOS app (Swift + SwiftUI) for managing all your local Cloudflare Work
 - **Menu bar**: start/stop toggles, open in browser / Explorer, stop all. The app keeps running from the menu bar when the window is closed.
 - **Detects projects started from a terminal** (workerd processes matched to projects by working directory).
 
-It never writes to your project folders (except when you press **Install** for missing dependencies), never modifies wrangler config, and never shows `vars` or `.dev.vars` values.
+It never writes to your project folders (it shows the install command when dependencies are missing, and leaves running it to you), never modifies wrangler config, and never shows `vars` or `.dev.vars` values.
 
 ## Design
 

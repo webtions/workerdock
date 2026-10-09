@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- WorkerDock no longer installs dependencies. The "dependencies not installed" banner shows the command with Copy and Open Terminal, and Start is disabled until they are installed.
+
 ## M4: Explorer, detection, memory, polish
 - Explorer tab embeds Local Explorer in a WKWebView that exists only while the tab is visible and the project is running; Wrangler < 4.82.1 (or Vite plugin < 1.32.0) shows the exact update command for the project's package manager.
 - Detects `workerd` processes started from a terminal and matches them to projects by working directory (libproc, no `lsof`).
