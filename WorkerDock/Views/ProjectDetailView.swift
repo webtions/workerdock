@@ -62,7 +62,10 @@ struct ProjectDetailView: View {
                             }
                             .font(.dCaption).foregroundStyle(Brand.muted)
                         }
-                        Text(model.effectiveMode(project).title).font(.dCaption).foregroundStyle(Brand.faint)
+                        if let command = model.runCommandSummary(project) {
+                            Text(command).font(.dMono).foregroundStyle(Brand.faint).lineLimit(1)
+                                .help("The command \(AppInfo.name) runs to start this project")
+                        }
                     }
                 }
                 Spacer(minLength: Space.m)
@@ -77,10 +80,11 @@ struct ProjectDetailView: View {
         .overlay(alignment: .bottom) { Rectangle().fill(Brand.border).frame(height: 1) }
     }
 
+    /// Just the state. A terminal glyph marks projects that were started outside WorkerDock.
     private func statusLabel(_ rt: ProjectRuntime) -> some View {
         let (text, color): (String, Color) = {
             switch rt.status {
-            case .running: return (rt.external ? "Running · attached" : "Running", Brand.success)
+            case .running: return ("Running", Brand.success)
             case .starting: return ("Starting", Brand.warning)
             case .stopped: return ("Stopped", Brand.muted)
             case .error: return ("Error", Brand.danger)
@@ -89,6 +93,10 @@ struct ProjectDetailView: View {
         return HStack(spacing: 6) {
             Circle().fill(color).frame(width: 6, height: 6)
             Text(text).font(.dCaption.weight(.medium))
+            if rt.external {
+                Icon("terminal", size: IconSize.sm).foregroundStyle(Brand.faint)
+                    .help("Started outside \(AppInfo.name), so logs and restart aren't available")
+            }
         }
         .foregroundStyle(color)
         .animation(.easeOut(duration: 0.2), value: text)

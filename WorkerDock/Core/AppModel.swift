@@ -209,6 +209,19 @@ final class AppModel {
         }
     }
 
+    /// The command WorkerDock runs for this project, without ports, for display (e.g. "npm run dev").
+    func runCommandSummary(_ p: Project) -> String? {
+        let pm = infos[p.id]?.packageManager ?? .npm
+        switch effectiveMode(p) {
+        case .wrangler: return "\(pm.execWrangler) dev"
+        case .pages: return "\(pm.execWrangler) pages dev"
+        case .vite, .devScript: return pm.runDev
+        case .custom:
+            let c = (p.customCommand ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            return c.isEmpty ? nil : c
+        }
+    }
+
     func effectiveMode(_ p: Project) -> RunModeKind {
         p.runModeOverride ?? infos[p.id]?.detectedMode ?? .wrangler
     }
@@ -472,7 +485,7 @@ final class AppModel {
         case .custom:
             let c = (p.customCommand ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             guard !c.isEmpty else {
-                rt.status = .error("No custom command set (see Actions tab)")
+                rt.status = .error("No custom command set (see the Settings tab)")
                 return
             }
             command = c
