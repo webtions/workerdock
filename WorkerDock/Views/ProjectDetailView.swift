@@ -62,10 +62,6 @@ struct ProjectDetailView: View {
                             }
                             .font(.dCaption).foregroundStyle(Brand.muted)
                         }
-                        if let command = model.runCommandSummary(project) {
-                            Text(command).font(.dMono).foregroundStyle(Brand.faint).lineLimit(1)
-                                .help("The command \(AppInfo.name) runs to start this project")
-                        }
                     }
                 }
                 Spacer(minLength: Space.m)
@@ -80,7 +76,7 @@ struct ProjectDetailView: View {
         .overlay(alignment: .bottom) { Rectangle().fill(Brand.border).frame(height: 1) }
     }
 
-    /// Just the state. A terminal glyph marks projects that were started outside WorkerDock.
+    /// Just the state.
     private func statusLabel(_ rt: ProjectRuntime) -> some View {
         let (text, color): (String, Color) = {
             switch rt.status {
@@ -93,10 +89,6 @@ struct ProjectDetailView: View {
         return HStack(spacing: 6) {
             Circle().fill(color).frame(width: 6, height: 6)
             Text(text).font(.dCaption.weight(.medium))
-            if rt.external {
-                Icon("terminal", size: IconSize.sm).foregroundStyle(Brand.faint)
-                    .help("Started outside \(AppInfo.name), so logs and restart aren't available")
-            }
         }
         .foregroundStyle(color)
         .animation(.easeOut(duration: 0.2), value: text)
@@ -131,7 +123,7 @@ struct ProjectDetailView: View {
                     .buttonStyle(.dockSecondary)
                     .disabled(!rt.managed)
                     .keyboardShortcut("r", modifiers: .command)
-                    .help("Restart (⌘R)")
+                    .help(rt.managed ? "Restart (⌘R)" : "Started outside \(AppInfo.name), so it can only be stopped here")
                 Button { model.stop(project.id) } label: { Label { Text("Stop") } icon: { Icon("square", size: 12) } }
                     .buttonStyle(.dockDanger)
                     .keyboardShortcut(".", modifiers: .command)

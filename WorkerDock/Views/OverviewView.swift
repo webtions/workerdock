@@ -97,6 +97,7 @@ struct OverviewView: View {
         if let main = info?.mainEntry { rows.append(("Entry", main, true)) }
         if let d = info?.compatibilityDate { rows.append(("Compatibility date", d, false)) }
         if let out = info?.pagesOutputDir { rows.append(("Pages output", out, true)) }
+        if let command = model.runCommandSummary(project) { rows.append(("Start command", command, true)) }
         rows.append(("Wrangler", info?.wranglerVersion ?? (info == nil ? "—" : "not installed"), false))
         if let v = info?.vitePluginVersion { rows.append(("Vite plugin", v, false)) }
         rows.append(("Package manager", info?.packageManager.rawValue ?? "—", false))
