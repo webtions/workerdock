@@ -43,9 +43,23 @@ struct EmptyStateView: View {
                 Button { addProject(model) } label: { Label { Text("Add Single Project") } icon: { Icon("plus", size: IconSize.sm) } }
                     .buttonStyle(.dockSecondary)
             }
+            VStack(alignment: .leading, spacing: Space.s) {
+                trustRow("eye", "Reads your project folders to find wrangler configs.")
+                trustRow("shield-check", "Never changes your files, and never installs anything.")
+                trustRow("cloud", "Everything stays on your Mac.")
+                trustRow("folder-open", "macOS may ask to allow access to folders like Documents. Choose Allow.")
+            }
+            .padding(.top, Space.s)
         }
         .appearIn()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private func trustRow(_ icon: String, _ text: String) -> some View {
+    HStack(spacing: Space.s) {
+        Icon(icon, size: IconSize.sm).foregroundStyle(Brand.muted).frame(width: IconSize.sm)
+        Text(text).font(.dCaption).foregroundStyle(Brand.muted)
     }
 }
 
