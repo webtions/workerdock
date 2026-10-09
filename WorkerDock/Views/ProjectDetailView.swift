@@ -51,7 +51,7 @@ struct ProjectDetailView: View {
 
     private func header(_ project: Project, _ rt: ProjectRuntime, _ info: ProjectInfo?) -> some View {
         let primary = ProjectKind.primary(info)
-        let extras = ProjectKind.badges(info).filter { $0 != primary }
+        let kindLabel = (ProjectKind.badges(info).isEmpty ? [ProjectKind.worker] : ProjectKind.badges(info)).map(\.name).joined(separator: " · ")
         return VStack(alignment: .leading, spacing: Space.m) {
             HStack(alignment: .center, spacing: Space.l) {
                 KindIcon(badge: primary, size: IconSize.xl).foregroundStyle(Brand.text)
@@ -79,13 +79,7 @@ struct ProjectDetailView: View {
                             .buttonStyle(.dockSecondaryCompact)
                             .help("Open the site in your browser")
                         }
-                        ForEach(extras) { badge in
-                            HStack(spacing: 5) {
-                                KindIcon(badge: badge, size: 12)
-                                Text(badge.name)
-                            }
-                            .font(.dCaption).foregroundStyle(Brand.muted)
-                        }
+                        Text(kindLabel).font(.dCaption).foregroundStyle(Brand.muted)
                     }
                 }
                 Spacer(minLength: Space.m)
@@ -94,8 +88,7 @@ struct ProjectDetailView: View {
 
             TabBar(selection: Bindable(model).selectedTab)
         }
-        .padding(.leading, Space.xl)
-        .padding(.trailing, Space.xl + NSScroller.scrollerWidth(for: .regular, scrollerStyle: NSScroller.preferredScrollerStyle))
+        .padding(.horizontal, Space.xl)
         .padding(.top, Space.m)
         .background(Brand.background)
         .overlay(alignment: .bottom) { Rectangle().fill(Brand.border).frame(height: 1) }

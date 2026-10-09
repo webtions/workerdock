@@ -74,6 +74,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
+        // Overlay scrollbars for this app only (shown while scrolling), so a scrollbar never takes width from the page
+        // and the header above it shares the page's left and right edges even when a mouse is attached.
+        UserDefaults.standard.set("WhenScrolling", forKey: "AppleShowScrollBars")
         if launchedAtLogin {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { NSApp.windows.filter { $0.canBecomeMain }.forEach { $0.close() } }
         }
