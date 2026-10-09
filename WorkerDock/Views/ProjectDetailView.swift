@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 enum DetailTab: String, CaseIterable, Identifiable {
     case overview = "Overview", logs = "Logs", explorer = "Explorer", settings = "Settings"
@@ -58,6 +59,7 @@ struct ProjectDetailView: View {
                     HStack(spacing: Space.s) {
                         Text(model.displayName(project)).font(.dLargeTitle).lineLimit(1)
                         statusLabel(rt)
+                        if rt.status.isActive, let bytes = rt.memoryBytes { MemoryBadge(bytes: bytes) }
                     }
                     HStack(spacing: Space.m) {
                         Text(abbreviated(project.path)).font(.dMono).foregroundStyle(Brand.muted)
@@ -90,12 +92,10 @@ struct ProjectDetailView: View {
                 controls(project, rt)
             }
 
-            HStack(alignment: .center) {
-                TabBar(selection: Bindable(model).selectedTab)
-                if rt.status.isActive, let bytes = rt.memoryBytes { MemoryBadge(bytes: bytes) }
-            }
+            TabBar(selection: Bindable(model).selectedTab)
         }
-        .padding(.horizontal, Space.xl)
+        .padding(.leading, Space.xl)
+        .padding(.trailing, Space.xl + NSScroller.scrollerWidth(for: .regular, scrollerStyle: NSScroller.preferredScrollerStyle))
         .padding(.top, Space.m)
         .background(Brand.background)
         .overlay(alignment: .bottom) { Rectangle().fill(Brand.border).frame(height: 1) }
@@ -152,7 +152,7 @@ struct ProjectDetailView: View {
                 Icon("ellipsis-vertical", size: IconSize.sm)
             }
             .menuStyle(.button)
-            .buttonStyle(DockIconButtonStyle(size: 28))
+            .buttonStyle(.dockIconBordered)
             .menuIndicator(.hidden)
             .fixedSize()
             .help("More")

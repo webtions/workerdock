@@ -38,8 +38,7 @@ struct OverviewView: View {
                 .appearIn(0.1)
             }
             .padding(Space.xl)
-            .frame(maxWidth: 1100, alignment: .leading)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

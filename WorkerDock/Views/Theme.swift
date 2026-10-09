@@ -306,23 +306,27 @@ extension ButtonStyle where Self == DockButtonStyle {
 /// Square icon-only button with a hover fill.
 struct DockIconButtonStyle: ButtonStyle {
     var size: CGFloat = 24
+    /// Hairline outline, to sit beside outlined text buttons.
+    var bordered = false
 
     func makeBody(configuration: Configuration) -> some View {
-        IconButtonBody(size: size, configuration: configuration)
+        IconButtonBody(size: size, bordered: bordered, configuration: configuration)
     }
 }
 
 private struct IconButtonBody: View {
     let size: CGFloat
+    let bordered: Bool
     let configuration: ButtonStyleConfiguration
     @State private var hover = false
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
         configuration.label
-            .foregroundStyle(hover ? Brand.text : Brand.muted)
+            .foregroundStyle(hover || bordered ? Brand.text : Brand.muted)
             .frame(width: size, height: size)
-            .background(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
-                .fill(hover ? Brand.selection : .clear))
+            .background(hover ? (bordered ? Brand.hover : Brand.selection) : .clear, in: shape)
+            .overlay(shape.strokeBorder(bordered ? Brand.border : .clear, lineWidth: 1))
             .scaleEffect(configuration.isPressed ? 0.92 : 1)
             .contentShape(Rectangle())
             .onHover { hover = $0 }
@@ -333,6 +337,7 @@ private struct IconButtonBody: View {
 
 extension ButtonStyle where Self == DockIconButtonStyle {
     static var dockIcon: DockIconButtonStyle { DockIconButtonStyle() }
+    static var dockIconBordered: DockIconButtonStyle { DockIconButtonStyle(size: 28, bordered: true) }
 }
 
 /// Look-alike of a secondary button for use as a `Menu` label.
