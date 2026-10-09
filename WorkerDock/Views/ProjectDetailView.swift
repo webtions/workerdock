@@ -38,6 +38,13 @@ struct ProjectDetailView: View {
             .animation(.easeOut(duration: 0.18), value: model.selectedTab)
             .navigationTitle(project.name)
             .task { await model.refreshInfo(projectID) }
+            // Memory is measured every few seconds while this project is on screen and running.
+            .task(id: rt.status) {
+                while !Task.isCancelled {
+                    await model.updateMemory(projectID)
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                }
+            }
         }
     }
 
@@ -88,23 +95,37 @@ struct ProjectDetailView: View {
         }()
         return HStack(spacing: 6) {
             Circle().fill(color).frame(width: 6, height: 6)
-            Text(text).font(.dCaption.weight(.medium))
+            Text(text).font(.dCaption.weight(.medium)).foregroundStyle(color)
+            if rt.status.isActive, let bytes = rt.memoryBytes {
+                Text(Format.bytes(bytes)).font(.dCaption).foregroundStyle(Brand.muted).monospacedDigit()
+                    .contentTransition(.numericText())
+                    .help("Memory used by this project, including workerd")
+            }
         }
-        .foregroundStyle(color)
         .animation(.easeOut(duration: 0.2), value: text)
     }
 
     @ViewBuilder
     private func controls(_ project: Project, _ rt: ProjectRuntime) -> some View {
         HStack(spacing: Space.s) {
+            if rt.status == .running, let url = rt.url {
+                // One click each for the two things used most: the admin login (EmDash) and the site itself.
+                if let admin = model.quickLinks(project.id).first(where: { $0 != .site }) {
+                    Button { model.open(admin, for: project.id) } label: {
+                        Label { Text("Admin Login") } icon: { Icon("user-round-key", size: IconSize.sm) }
+                    }
+                    .buttonStyle(.dockSecondary)
+                    .help("Open \(admin.path)")
+                }
+                Button { model.openInBrowser(project.id) } label: {
+                    Label { Text(url.host.map { "\($0):\(url.port ?? 80)" } ?? url.absoluteString).font(.dMono) }
+                        icon: { Icon("arrow-up-right", size: IconSize.sm) }
+                }
+                .buttonStyle(.dockSecondary)
+                .help("Open the site in your browser")
+            }
             Menu {
-                if rt.status == .running, let url = rt.url {
-                    Button { model.openInBrowser(project.id) } label: {
-                        Text("Open site · \(url.host.map { "\($0):\(url.port ?? 80)" } ?? url.absoluteString)")
-                    }
-                    ForEach(model.quickLinks(project.id).filter { $0 != .site }) { link in
-                        Button(link.title) { model.open(link, for: project.id) }
-                    }
+                if rt.status == .running {
                     Button("Open Explorer in browser") { model.openExplorer(project.id) }
                     Divider()
                 }
@@ -112,12 +133,13 @@ struct ProjectDetailView: View {
                 Button("Open in \(model.settings.editorCommand.isEmpty ? (model.editorApp?.name ?? "Editor") : "Editor")") { model.openInEditor(project.id) }
                 Button("Open in \(model.terminalApp?.name ?? "Terminal")") { model.openTerminal(project.id) }
             } label: {
-                MenuChip(title: "Open", icon: "arrow-up-right")
+                Icon("ellipsis", size: IconSize.sm)
             }
             .menuStyle(.button)
-            .buttonStyle(.plain)
+            .buttonStyle(DockIconButtonStyle(size: 28))
             .menuIndicator(.hidden)
             .fixedSize()
+            .help("More")
             if rt.status.isActive {
                 Button { model.restart(project.id) } label: { Label { Text("Restart") } icon: { Icon("rotate-cw", size: IconSize.sm) } }
                     .buttonStyle(.dockSecondary)

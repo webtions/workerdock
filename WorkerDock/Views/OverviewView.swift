@@ -41,13 +41,6 @@ struct OverviewView: View {
             .frame(maxWidth: 1100, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
-        // Memory is only measured while this tab is on screen and the project is up.
-        .task(id: rt.status) {
-            while !Task.isCancelled {
-                await model.updateMemory(project.id)
-                try? await Task.sleep(nanoseconds: 3_000_000_000)
-            }
-        }
     }
 
     // MARK: Pieces
@@ -102,7 +95,6 @@ struct OverviewView: View {
         if let v = info?.vitePluginVersion { rows.append(("Vite plugin", v, false)) }
         rows.append(("Package manager", info?.packageManager.rawValue ?? "—", false))
         if let ip = project.inspectorPort { rows.append(("Inspector port", String(ip), false)) }
-        if rt.status.isActive { rows.append(("Memory", rt.memoryBytes.map(Format.bytes) ?? "…", false)) }
         if rt.external { rows.append(("Started by", "outside \(AppInfo.name) (attached)", false)) }
         return rows
     }
