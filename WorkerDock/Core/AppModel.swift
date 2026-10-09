@@ -31,6 +31,8 @@ final class AppModel {
     // MARK: - Demo (marketing screenshots)
 
     func loadDemoState() {
+        // Lets screenshots open a given tab: WORKERDOCK_DEMO_TAB=logs|explorer|settings.
+        if let t = ProcessInfo.processInfo.environment["WORKERDOCK_DEMO_TAB"], let tab = DetailTab(rawValue: t.capitalized) { selectedTab = tab }
         var ps: [Project] = []
         var infoMap: [String: ProjectInfo] = [:]
         for e in DemoData.entries {
