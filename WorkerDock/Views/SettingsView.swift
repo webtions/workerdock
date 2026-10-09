@@ -17,6 +17,7 @@ struct SettingsView: View {
                 Toggle("Show icon in the Dock", isOn: $model.settings.showDockIcon)
                 Text("Turn off to keep \(AppInfo.name) in the menu bar only.")
                     .font(.caption).foregroundStyle(.secondary)
+                if AppUpdater.shared.isEnabled { UpdateRows() }
                 if let support = AppInfo.supportURL {
                     Link("Support \(AppInfo.name)", destination: support)
                 }
@@ -201,5 +202,21 @@ struct FolderAccessRows: View {
 
     private func check() {
         blocked = Set(model.roots.filter { (try? FileManager.default.contentsOfDirectory(atPath: $0)) == nil })
+    }
+}
+
+/// Automatic update checks, plus a manual "Check now".
+struct UpdateRows: View {
+    @State private var automatic = AppUpdater.shared.automaticallyChecks
+
+    var body: some View {
+        Toggle("Check for updates automatically", isOn: Binding(
+            get: { automatic },
+            set: { automatic = $0; AppUpdater.shared.automaticallyChecks = $0 }))
+        HStack {
+            Text("Version \(AppInfo.version)").font(.caption).foregroundStyle(.secondary)
+            Spacer()
+            Button("Check now") { AppUpdater.shared.checkForUpdates() }
+        }
     }
 }

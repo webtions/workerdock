@@ -17,6 +17,9 @@ struct WorkerDockApp: App {
         .commands {
             CommandGroup(replacing: .appInfo) {
                 AboutMenuButton()
+                if AppUpdater.shared.isEnabled {
+                    Button("Check for Updates…") { AppUpdater.shared.checkForUpdates() }
+                }
             }
             CommandMenu("Project") {
                 Button("Start") { if let id = model.selection { model.start(id) } }
@@ -107,6 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_START"] != nil {
             NSApp.setActivationPolicy(.prohibited)   // headless debug run: no window, no second app icon
         }
+        AppUpdater.shared.start()
         AppModel.shared.bootstrap()
     }
 
