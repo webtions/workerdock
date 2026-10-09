@@ -15,6 +15,9 @@ struct WorkerDockApp: App {
         .defaultSize(width: 1120, height: 740)
         .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
+            CommandGroup(replacing: .appInfo) {
+                AboutMenuButton()
+            }
             CommandMenu("Project") {
                 Button("Start") { if let id = model.selection { model.start(id) } }
                     .keyboardShortcut(.return, modifiers: .command)
@@ -28,6 +31,12 @@ struct WorkerDockApp: App {
             }
         }
 
+        Window("About \(AppInfo.name)", id: "about") {
+            AboutView()
+        }
+        .windowResizability(.contentSize)
+        .windowStyle(.hiddenTitleBar)
+
         MenuBarExtra {
             MenuBarContent().environment(model)
         } label: {
@@ -40,6 +49,16 @@ struct WorkerDockApp: App {
 
         Settings {
             SettingsView().environment(model)
+        }
+    }
+}
+
+struct AboutMenuButton: View {
+    @Environment(\.openWindow) private var openWindow
+    var body: some View {
+        Button("About \(AppInfo.name)") {
+            openWindow(id: "about")
+            NSApp.activate(ignoringOtherApps: true)
         }
     }
 }

@@ -8,6 +8,15 @@ enum AppInfo {
     static let minExplorerWrangler = SemVer("4.82.1")!
     static let minExplorerVitePlugin = SemVer("1.32.0")!
     static let explorerPath = "/cdn-cgi/explorer"
+    static let website = URL(string: "https://workerdock.app")!
+    /// Optional "support the project" page. Leave nil until the checkout link exists; the UI hides the button.
+    static let supportURL: URL? = nil
+
+    static var version: String {
+        let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
+        let b = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
+        return "\(v) (\(b))"
+    }
 }
 
 // MARK: - Versions
