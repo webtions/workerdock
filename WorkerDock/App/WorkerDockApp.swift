@@ -45,6 +45,18 @@ struct WorkerDockApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// True when macOS started the app at login, so it should stay in the menu bar without a window.
+    private var launchedAtLogin: Bool {
+        NSAppleEventManager.shared().currentAppleEvent?
+            .paramDescriptor(forKeyword: AEKeyword(keyAEPropData))?.enumCodeValue == OSType(keyAELaunchedAsLogInItem)
+    }
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        if launchedAtLogin {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { NSApp.windows.filter { $0.canBecomeMain }.forEach { $0.close() } }
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // The unit-test runner launches a copy of the app as its host: keep it invisible
         // and away from the user's real registry.

@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ServiceManagement
 
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
@@ -7,11 +8,15 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var model = model
         Form {
-            Section("Appearance") {
+            Section("General") {
                 Picker("Theme", selection: $model.settings.appearance) {
                     ForEach(AppearanceMode.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
+                LoginItemToggle()
+                Toggle("Show icon in the Dock", isOn: $model.settings.showDockIcon)
+                Text("Turn off to keep \(AppInfo.name) in the menu bar only.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             Section("Project folders") {
@@ -115,5 +120,38 @@ struct AppPicker: View {
         } else {
             selection = value
         }
+    }
+}
+
+/// "Open at login" switch backed by macOS's own login-item list, so System Settings always agrees with it.
+struct LoginItemToggle: View {
+    @State private var status = SMAppService.mainApp.status
+    @State private var error: String?
+
+    private var isOn: Bool { status == .enabled || status == .requiresApproval }
+
+    var body: some View {
+        Toggle("Open \(AppInfo.name) at login", isOn: Binding(get: { isOn }, set: set))
+        if status == .requiresApproval {
+            HStack(spacing: 6) {
+                Text("macOS needs your approval.").font(.caption).foregroundStyle(.secondary)
+                Button("Open Login Items") { SMAppService.openSystemSettingsLoginItems() }
+                    .buttonStyle(.link).font(.caption)
+            }
+        } else if let error {
+            Text(error).font(.caption).foregroundStyle(.red)
+        } else {
+            Text("Starts quietly in the menu bar, without opening a window.").font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private func set(_ on: Bool) {
+        error = nil
+        do {
+            if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+        } catch {
+            self.error = "Couldn't change this: \(error.localizedDescription). Move \(AppInfo.name) to the Applications folder and try again."
+        }
+        status = SMAppService.mainApp.status
     }
 }

@@ -87,6 +87,7 @@ final class AppModel {
 
     func bootstrap() {
         applyAppearance()
+        if !settings.showDockIcon { applyDockIcon() }
         refreshInstalledApps()
         Task {
             if isDemo {
@@ -423,8 +424,18 @@ final class AppModel {
         }
     }
 
+    /// Hides the Dock icon (menu bar only) when asked. Only ever switches away from the default, so debug and test launches are untouched.
+    func applyDockIcon() {
+        guard !isDemo else { return }
+        NSApp.setActivationPolicy(settings.showDockIcon ? .regular : .accessory)
+    }
+
     private func settingsChanged(old: AppSettings) {
         if old.appearance != settings.appearance { applyAppearance() }
+        if old.showDockIcon != settings.showDockIcon {
+            applyDockIcon()
+            NSApp.activate(ignoringOtherApps: true)
+        }
         guard !isDemo else { return }
         Persistence.save(settings, file: "settings.json")
         if old.watchRoots != settings.watchRoots { updateWatcher() }

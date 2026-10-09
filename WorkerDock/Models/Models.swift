@@ -289,6 +289,7 @@ enum AppearanceMode: String, Codable, CaseIterable, Identifiable {
 
 struct AppSettings: Codable, Equatable {
     var appearance = AppearanceMode.system
+    var showDockIcon = true
     var terminalApp = ""     // bundle id or path; empty = automatic
     var editorApp = ""       // bundle id or path; empty = automatic
     var editorCommand = ""   // optional shell command that overrides editorApp
@@ -299,6 +300,7 @@ struct AppSettings: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         appearance = try c.decodeIfPresent(AppearanceMode.self, forKey: .appearance) ?? .system
+        showDockIcon = try c.decodeIfPresent(Bool.self, forKey: .showDockIcon) ?? true
         terminalApp = try c.decodeIfPresent(String.self, forKey: .terminalApp) ?? ""
         editorApp = try c.decodeIfPresent(String.self, forKey: .editorApp) ?? ""
         // "code" used to be the default command; it is now covered by automatic detection.
