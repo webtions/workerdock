@@ -20,19 +20,18 @@ struct OverviewView: View {
 
                 if let info {
                     VStack(alignment: .leading, spacing: Space.s) {
-                        SectionTitle(title: "Bindings",
-                                     trailing: "\(info.bindings.count + (info.varNames.isEmpty ? 0 : 1)) connected")
-                        Card(padding: Space.l) {
-                            if info.bindings.isEmpty && info.varNames.isEmpty {
+                        SectionTitle(title: "Bindings")
+                        if info.bindings.isEmpty && info.varNames.isEmpty {
+                            Card(padding: Space.l) {
                                 HStack(spacing: Space.s) {
                                     Icon("plug", size: IconSize.md).foregroundStyle(Brand.faint)
                                     Text("No bindings in this project's config.").font(.dBody).foregroundStyle(Brand.muted)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                            } else {
-                                BindingGraph(workerName: info.workerName ?? project.name, entry: info.mainEntry,
-                                             bindings: info.bindings, varNames: info.varNames, status: rt.status)
                             }
+                        } else {
+                            BindingGraph(workerName: info.workerName ?? project.name, entry: info.mainEntry,
+                                         bindings: info.bindings, varNames: info.varNames, status: rt.status)
                         }
                     }
                     .appearIn(0.04)
@@ -40,7 +39,7 @@ struct OverviewView: View {
 
                 VStack(alignment: .leading, spacing: Space.s) {
                     SectionTitle(title: "Details")
-                    Card(padding: Space.xs) {
+                    Card(padding: 0) {
                         VStack(spacing: 0) {
                             let rows = detailRows(info, rt)
                             ForEach(Array(rows.enumerated()), id: \.offset) { i, row in
@@ -105,13 +104,10 @@ struct OverviewView: View {
         ]
         if let main = info?.mainEntry { rows.append(("Entry", main, true)) }
         if let d = info?.compatibilityDate { rows.append(("Compatibility date", d, false)) }
-        rows.append(("Run mode", model.effectiveMode(project).title + (project.runModeOverride == nil ? " (auto)" : ""), false))
         if let out = info?.pagesOutputDir { rows.append(("Pages output", out, true)) }
         rows.append(("Wrangler", info?.wranglerVersion ?? (info == nil ? "—" : "not installed"), false))
         if let v = info?.vitePluginVersion { rows.append(("Vite plugin", v, false)) }
         rows.append(("Package manager", info?.packageManager.rawValue ?? "—", false))
-        if let url = rt.url, let port = url.port { rows.append(("Port", String(port), false)) }
-        else if let p = project.port { rows.append(("Port", "\(p) (reserved)", false)) }
         if let ip = project.inspectorPort { rows.append(("Inspector port", String(ip), false)) }
         if rt.status.isActive { rows.append(("Memory", rt.memoryBytes.map(Format.bytes) ?? "…", false)) }
         if rt.external { rows.append(("Started by", "outside \(AppInfo.name) (attached)", false)) }
@@ -119,34 +115,31 @@ struct OverviewView: View {
     }
 }
 
+/// One label/value line. Every value has a visible copy button; no hover fill.
 struct DetailRow: View {
     let label: String
     let value: String
     let mono: Bool
-    @State private var hover = false
     @State private var copied = false
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Space.m) {
+        HStack(spacing: Space.m) {
             Text(label).font(.dBody).foregroundStyle(Brand.muted).frame(width: 140, alignment: .leading)
             Text(value).font(mono ? .dMono : .dBody).textSelection(.enabled).lineLimit(1).truncationMode(.middle)
-                .contentTransition(.numericText())
             Spacer(minLength: Space.s)
-            if mono && hover {
-                Button {
-                    copyToPasteboard(value)
-                    copied = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { copied = false }
-                } label: { Icon(copied ? "check" : "copy", size: IconSize.sm) }
-                .buttonStyle(DockIconButtonStyle(size: 22))
-                .help("Copy")
-                .transition(.opacity)
+            Button {
+                copyToPasteboard(value)
+                withAnimation(.easeOut(duration: 0.15)) { copied = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { withAnimation(.easeOut(duration: 0.15)) { copied = false } }
+            } label: {
+                Icon(copied ? "check" : "copy", size: IconSize.sm)
+                    .foregroundStyle(copied ? Brand.success : Brand.faint)
+                    .contentTransition(.symbolEffect(.replace))
             }
+            .buttonStyle(DockIconButtonStyle(size: 24))
+            .help("Copy \(label.lowercased())")
         }
-        .padding(.horizontal, Space.m).frame(minHeight: 34)
-        .hoverFill(radius: Radius.control)
-        .onHover { hover = $0 }
-        .animation(.easeOut(duration: 0.12), value: hover)
+        .padding(.horizontal, Space.m).frame(height: 36)
     }
 }
 
