@@ -53,8 +53,8 @@ struct BindingGraph: View {
 
         GeometryReader { geo in
             let w = geo.size.width
-            let workerW = min(240, w * 0.34)
-            let nodeW = min(380, w * 0.48)
+            let workerW = min(230, w * 0.34)
+            let nodeW = min(340, w * 0.48)
             let workerRight = workerW
             let nodeLeft = w - nodeW
 
@@ -121,7 +121,9 @@ struct BindingGraph: View {
                 .offset(x: nodeLeft, y: offsetY)
             }
         }
+        .frame(maxWidth: 760)
         .frame(height: totalH)
+        .frame(maxWidth: .infinity)
         .padding(inset)
         .background {
             ZStack {
@@ -143,7 +145,7 @@ struct BindingGraph: View {
                 }
             }
             if let entry {
-                Text(entry).font(.dMono).foregroundStyle(Brand.muted).lineLimit(1).truncationMode(.middle)
+                Text(entry).font(.dMono).foregroundStyle(Brand.muted).lineLimit(1).truncationMode(.head)
             }
         }
         .padding(Space.m)
@@ -171,7 +173,7 @@ private struct DotGrid: View {
             while y < size.height {
                 var x: CGFloat = step / 2
                 while x < size.width {
-                    gc.fill(Path(ellipseIn: CGRect(x: x - 0.9, y: y - 0.9, width: 1.8, height: 1.8)), with: .color(Brand.text.opacity(0.09)))
+                    gc.fill(Path(ellipseIn: CGRect(x: x - 0.9, y: y - 0.9, width: 1.8, height: 1.8)), with: .color(Brand.text.opacity(0.16)))
                     x += step
                 }
                 y += step
