@@ -7,6 +7,13 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var model = model
         Form {
+            Section("Appearance") {
+                Picker("Theme", selection: $model.settings.appearance) {
+                    ForEach(AppearanceMode.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+            }
+
             Section("Project folders") {
                 if model.roots.isEmpty {
                     Text("No folders added yet.").foregroundStyle(.secondary)

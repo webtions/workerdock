@@ -282,7 +282,14 @@ extension String {
 
 // MARK: - Persisted files
 
+enum AppearanceMode: String, Codable, CaseIterable, Identifiable {
+    case system, light, dark
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+}
+
 struct AppSettings: Codable, Equatable {
+    var appearance = AppearanceMode.system
     var editorCommand = "code"
     var nodePath = ""
     var watchRoots = false
@@ -290,6 +297,7 @@ struct AppSettings: Codable, Equatable {
     init() {}
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        appearance = try c.decodeIfPresent(AppearanceMode.self, forKey: .appearance) ?? .system
         editorCommand = try c.decodeIfPresent(String.self, forKey: .editorCommand) ?? "code"
         nodePath = try c.decodeIfPresent(String.self, forKey: .nodePath) ?? ""
         watchRoots = try c.decodeIfPresent(Bool.self, forKey: .watchRoots) ?? false

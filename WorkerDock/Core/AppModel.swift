@@ -84,6 +84,7 @@ final class AppModel {
     }
 
     func bootstrap() {
+        applyAppearance()
         Task {
             if isDemo {
                 loadDemoState()
@@ -397,7 +398,17 @@ final class AppModel {
         }
     }
 
+    /// Forces the app (all windows, the menu bar and Settings) into light or dark, or follows the system.
+    func applyAppearance() {
+        switch settings.appearance {
+        case .system: NSApp?.appearance = nil
+        case .light: NSApp?.appearance = NSAppearance(named: .aqua)
+        case .dark: NSApp?.appearance = NSAppearance(named: .darkAqua)
+        }
+    }
+
     private func settingsChanged(old: AppSettings) {
+        if old.appearance != settings.appearance { applyAppearance() }
         guard !isDemo else { return }
         Persistence.save(settings, file: "settings.json")
         if old.watchRoots != settings.watchRoots { updateWatcher() }
