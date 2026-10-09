@@ -9,41 +9,20 @@ struct BindingGraph: View {
     let bindings: [WorkerBinding]
     let varNames: [String]
     let status: ProjectStatus
+    let configFile: String
+    let onOpenConfig: () -> Void
 
     @State private var hovered: String?
 
-    fileprivate struct Node: Identifiable {
-        let id: String
-        let icon: String
-        let color: Color
-        let title: String
-        let subtitle: String?
-        let tag: String
-    }
-
     private let rowH: CGFloat = 52
     private let gap: CGFloat = 10
-    private let workerH: CGFloat = 92
+    private let workerH: CGFloat = 132
     private let inset: CGFloat = Space.xl
 
     private var running: Bool { status == .running }
 
-    private var nodes: [Node] {
-        var list = BindingKind.allCases.flatMap { kind in
-            bindings.filter { $0.kind == kind }.map {
-                Node(id: $0.id, icon: kind.lucide, color: Brand.kind(kind), title: $0.name, subtitle: $0.detail, tag: kind.shortTitle)
-            }
-        }
-        if !varNames.isEmpty {
-            list.append(Node(id: "vars", icon: "braces", color: Brand.muted, title: "Variables",
-                             subtitle: varNames.prefix(4).joined(separator: ", ") + (varNames.count > 4 ? " +\(varNames.count - 4)" : ""),
-                             tag: varNames.count == 1 ? "1 var" : "\(varNames.count) vars"))
-        }
-        return list
-    }
-
     var body: some View {
-        let items = nodes
+        let items = BindingItem.items(bindings: bindings, varNames: varNames)
         let n = items.count
         let contentH = CGFloat(n) * rowH + CGFloat(max(0, n - 1)) * gap
         let totalH = max(workerH, contentH)
@@ -71,15 +50,13 @@ struct BindingGraph: View {
                             let p2 = CGPoint(x: p3.x - dx * 0.55, y: p3.y)
                             let isHot = hovered == node.id
                             let dim = hovered != nil && !isHot
-                            let alpha = dim ? 0.12 : (isHot ? 1 : (running ? 0.55 : 0.35))
+                            let alpha = dim ? 0.15 : (isHot ? 1 : (running ? 0.8 : 0.6))
 
                             var path = Path()
                             path.move(to: p0)
                             path.addCurve(to: p3, control1: p1, control2: p2)
-                            gc.stroke(path,
-                                      with: .linearGradient(Gradient(colors: [Brand.cloudflare.opacity(alpha), node.color.opacity(alpha)]),
-                                                            startPoint: p0, endPoint: p3),
-                                      style: StrokeStyle(lineWidth: isHot ? 2 : 1.4, lineCap: .round))
+                            gc.stroke(path, with: .color(node.color.opacity(alpha)),
+                                      style: StrokeStyle(lineWidth: isHot ? 2.2 : 1.6, lineCap: .round))
 
                             if running && !dim {
                                 for k in 0..<2 {
@@ -147,6 +124,9 @@ struct BindingGraph: View {
             if let entry {
                 Text(entry).font(.dMono).foregroundStyle(Brand.muted).lineLimit(1).truncationMode(.head)
             }
+            Spacer(minLength: 0)
+            Divider().overlay(Brand.borderSoft)
+            ConfigRow(file: configFile, action: onOpenConfig)
         }
         .padding(Space.m)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -184,7 +164,7 @@ private struct DotGrid: View {
 }
 
 private struct NodeCard: View {
-    let node: BindingGraph.Node
+    let node: BindingItem
     let height: CGFloat
     @Binding var hovered: String?
 
@@ -201,8 +181,9 @@ private struct NodeCard: View {
             }
             Spacer(minLength: Space.s)
             Text(node.tag).font(.dCaption).foregroundStyle(hot ? node.color : Brand.muted)
+            BindingMenu(item: node)
         }
-        .padding(.horizontal, Space.m)
+        .padding(.leading, Space.m).padding(.trailing, Space.s)
         .frame(height: height)
         .background(Brand.cardRaised, in: RoundedRectangle(cornerRadius: Radius.panel, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Radius.panel, style: .continuous)
@@ -211,5 +192,31 @@ private struct NodeCard: View {
         .contentShape(Rectangle())
         .onHover { inside in hovered = inside ? node.id : (hovered == node.id ? nil : hovered) }
         .animation(.easeOut(duration: 0.15), value: hot)
+    }
+}
+
+/// Opens the project's wrangler config in the chosen editor.
+private struct ConfigRow: View {
+    let file: String
+    let action: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Space.s) {
+                Icon("file-text", size: IconSize.sm).foregroundStyle(Brand.muted)
+                Text(file).font(.dMono).lineLimit(1)
+                Spacer(minLength: Space.xs)
+                Icon("chevron-right", size: IconSize.sm).foregroundStyle(hover ? Brand.text : Brand.faint)
+                    .offset(x: hover ? 2 : 0)
+            }
+            .padding(.horizontal, Space.xs).frame(height: 26)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .hoverFill(radius: Radius.control)
+        .onHover { hover = $0 }
+        .animation(.easeOut(duration: 0.15), value: hover)
+        .help("Open \(file) in your editor")
     }
 }

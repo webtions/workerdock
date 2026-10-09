@@ -184,11 +184,13 @@ struct Card<Content: View>: View {
 
 struct SectionTitle: View {
     let title: String
+    var count: Int?
     var trailing: String?
 
     var body: some View {
-        HStack {
+        HStack(spacing: Space.s) {
             Text(title).font(.dLabel).foregroundStyle(Brand.muted).textCase(.uppercase).tracking(0.6)
+            if let count { Text("\(count)").font(.dLabel).foregroundStyle(Brand.faint).monospacedDigit() }
             Spacer()
             if let trailing { Text(trailing).font(.dCaption).foregroundStyle(Brand.faint) }
         }

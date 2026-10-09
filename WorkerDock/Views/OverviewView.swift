@@ -19,22 +19,8 @@ struct OverviewView: View {
                 }
 
                 if let info {
-                    VStack(alignment: .leading, spacing: Space.s) {
-                        SectionTitle(title: "Bindings")
-                        if info.bindings.isEmpty && info.varNames.isEmpty {
-                            Card(padding: Space.l) {
-                                HStack(spacing: Space.s) {
-                                    Icon("plug", size: IconSize.md).foregroundStyle(Brand.faint)
-                                    Text("No bindings in this project's config.").font(.dBody).foregroundStyle(Brand.muted)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                        } else {
-                            BindingGraph(workerName: info.workerName ?? project.name, entry: info.mainEntry,
-                                         bindings: info.bindings, varNames: info.varNames, status: rt.status)
-                        }
-                    }
-                    .appearIn(0.04)
+                    BindingsSection(project: project, info: info, status: rt.status)
+                        .appearIn(0.04)
                 }
 
                 VStack(alignment: .leading, spacing: Space.s) {

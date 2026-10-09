@@ -731,17 +731,19 @@ final class AppModel {
         NSWorkspace.shared.open([p.url], withApplicationAt: app.url, configuration: NSWorkspace.OpenConfiguration())
     }
 
-    func openInEditor(_ id: String) {
+    /// Opens the project folder, or one file inside it, in the chosen editor.
+    func openInEditor(_ id: String, file: String? = nil) {
         guard let p = project(id) else { return }
+        let target = file.map { URL(fileURLWithPath: p.path).appendingPathComponent($0) } ?? p.url
         // A custom command, when set, wins over the chosen app.
         let command = settings.editorCommand.trimmingCharacters(in: .whitespaces)
         if !command.isEmpty {
             let env = environment
-            Task.detached { _ = Self.runShell("\(command) \"\(p.path)\"", env: env) }
+            Task.detached { _ = Self.runShell("\(command) \"\(target.path)\"", env: env) }
             return
         }
         guard let app = editorApp else { showError("No code editor found. Choose one in Settings."); return }
-        NSWorkspace.shared.open([p.url], withApplicationAt: app.url, configuration: NSWorkspace.OpenConfiguration())
+        NSWorkspace.shared.open([target], withApplicationAt: app.url, configuration: NSWorkspace.OpenConfiguration())
     }
 
     nonisolated private static func runShell(_ command: String, env: [String: String]) -> Bool {
