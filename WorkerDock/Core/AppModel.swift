@@ -712,9 +712,15 @@ final class AppModel {
 
     private(set) var installedTerminals: [ExternalApp] = AppCatalog.installed(AppCatalog.terminals)
 
+    private(set) var installedEditors: [ExternalApp] = AppCatalog.installed(AppCatalog.editors)
+
     func refreshInstalledApps() {
         installedTerminals = AppCatalog.installed(AppCatalog.terminals)
+        installedEditors = AppCatalog.installed(AppCatalog.editors)
     }
+
+    /// The editor that "Open in Editor" uses: the saved choice, else the first one installed.
+    var editorApp: ExternalApp? { AppCatalog.resolve(settings.editorApp, among: installedEditors) }
 
     /// The terminal that "Open Terminal" uses: the saved choice, else the first one installed.
     var terminalApp: ExternalApp? { AppCatalog.resolve(settings.terminalApp, among: installedTerminals) }
@@ -727,14 +733,15 @@ final class AppModel {
 
     func openInEditor(_ id: String) {
         guard let p = project(id) else { return }
-        let editor = settings.editorCommand.trimmingCharacters(in: .whitespaces)
-        let env = environment
-        Task.detached {
-            let ok = Self.runShell("\(editor.isEmpty ? "code" : editor) \"\(p.path)\"", env: env)
-            if !ok && (editor.isEmpty || editor == "code") {
-                _ = Self.runShell("open -a \"Visual Studio Code\" \"\(p.path)\"", env: env)
-            }
+        // A custom command, when set, wins over the chosen app.
+        let command = settings.editorCommand.trimmingCharacters(in: .whitespaces)
+        if !command.isEmpty {
+            let env = environment
+            Task.detached { _ = Self.runShell("\(command) \"\(p.path)\"", env: env) }
+            return
         }
+        guard let app = editorApp else { showError("No code editor found. Choose one in Settings."); return }
+        NSWorkspace.shared.open([p.url], withApplicationAt: app.url, configuration: NSWorkspace.OpenConfiguration())
     }
 
     nonisolated private static func runShell(_ command: String, env: [String: String]) -> Bool {

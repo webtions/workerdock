@@ -39,9 +39,11 @@ struct SettingsView: View {
             }
 
             Section("Editor") {
-                TextField("Command", text: $model.settings.editorCommand, prompt: Text("code"))
+                AppPicker(title: "Open projects with", selection: $model.settings.editorApp,
+                          installed: model.installedEditors, automatic: model.installedEditors.first?.name)
+                TextField("Custom command", text: $model.settings.editorCommand, prompt: Text("Optional, e.g. code or cursor"))
                     .font(.body.monospaced())
-                Text("Run as `<command> <project folder>`. Falls back to Visual Studio Code if `code` isn't on your PATH.")
+                Text("When set, runs as `<command> <project folder>` and is used instead of the app above.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
