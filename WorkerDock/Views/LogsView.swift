@@ -6,6 +6,9 @@ struct LogsView: View {
     @State private var filter = ""
     @State private var autoScroll = true
     @FocusState private var searchFocused: Bool
+    @State private var handle = LogViewHandle()
+    @State private var copied = false
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         let rt = model.runtime(project.id)
@@ -41,6 +44,17 @@ struct LogsView: View {
                 .buttonStyle(DockToggleStyle(isOn: autoScroll))
                 .help("Auto-scroll to the newest line")
 
+                Button {
+                    handle.copy(fallback: lines.map(\.text).joined(separator: "\n"))
+                    withAnimation(.easeOut(duration: 0.15)) { copied = true }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { withAnimation(.easeOut(duration: 0.15)) { copied = false } }
+                } label: {
+                    Label { Text(copied ? "Copied" : "Copy") } icon: { Icon(copied ? "check" : "copy", size: IconSize.sm) }
+                }
+                .buttonStyle(.dockSecondary)
+                .disabled(lines.isEmpty)
+                .help("Copy the selected text, or all visible lines")
+
                 Button { rt.log.clear() } label: { Label { Text("Clear") } icon: { Icon("eraser", size: IconSize.sm) } }
                     .buttonStyle(.dockSecondary)
             }
@@ -53,22 +67,7 @@ struct LogsView: View {
                 } else if lines.isEmpty {
                     placeholder("scroll-text", all.isEmpty ? "No output yet" : "No matches", all.isEmpty ? "Start the project to see its output here." : "Nothing matches “\(filter)”.")
                 } else {
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            LazyVStack(alignment: .leading, spacing: 2) {
-                                ForEach(lines) { line in
-                                    LogRow(line: line).id(line.id)
-                                }
-                            }
-                            .padding(Space.m)
-                        }
-                        .onChange(of: lines.last?.id) { _, last in
-                            if autoScroll, let last { proxy.scrollTo(last, anchor: .bottom) }
-                        }
-                        .onAppear {
-                            if let last = lines.last?.id { proxy.scrollTo(last, anchor: .bottom) }
-                        }
-                    }
+                    LogTextView(lines: lines, follow: autoScroll, scheme: scheme, handle: handle)
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: Radius.panel, style: .continuous))
