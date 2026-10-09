@@ -7,34 +7,30 @@ struct ActionsView: View {
     @State private var portText = ""
 
     var body: some View {
-        let rt = model.runtime(project.id)
         let mode = model.effectiveMode(project)
 
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading, spacing: 10) {
-                    SectionTitle(title: "Open", icon: "arrow-up-right")
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 12)], spacing: 12) {
-                        ActionTile(icon: "globe", title: "Open in Browser", subtitle: rt.url?.absoluteString ?? "Available while running",
-                                   enabled: rt.status == .running) { model.openInBrowser(project.id) }
-                        ActionTile(icon: "compass", title: "Open Explorer", subtitle: "Local D1, KV, R2 and more",
-                                   enabled: rt.status == .running) { model.openExplorer(project.id) }
-                        ForEach(model.quickLinks(project.id).filter { $0 != .site }) { link in
-                            ActionTile(icon: link.symbolLucide, title: link.title, subtitle: link.path,
-                                       enabled: rt.status == .running) { model.open(link, for: project.id) }
+            VStack(alignment: .leading, spacing: Space.xl) {
+                VStack(alignment: .leading, spacing: Space.s) {
+                    SectionTitle(title: "Project")
+                    Card(padding: Space.xs) {
+                        VStack(spacing: 0) {
+                            ActionRow(icon: "folder-open", title: "Reveal in Finder", subtitle: "Finder") { model.reveal(project.id) }
+                            Divider().overlay(Brand.borderSoft).padding(.horizontal, Space.m)
+                            ActionRow(icon: "code-xml", title: "Open in Editor", subtitle: model.settings.editorCommand.isEmpty ? "code" : model.settings.editorCommand) { model.openInEditor(project.id) }
+                            Divider().overlay(Brand.borderSoft).padding(.horizontal, Space.m)
+                            ActionRow(icon: "terminal", title: "Open Terminal Here", subtitle: "Terminal.app") { model.openTerminal(project.id) }
                         }
-                        ActionTile(icon: "folder-open", title: "Reveal in Finder", subtitle: abbreviated(project.path)) { model.reveal(project.id) }
-                        ActionTile(icon: "code-xml", title: "Open in Editor", subtitle: model.settings.editorCommand.isEmpty ? "code" : model.settings.editorCommand) { model.openInEditor(project.id) }
-                        ActionTile(icon: "terminal", title: "Open Terminal Here", subtitle: "Terminal.app") { model.openTerminal(project.id) }
                     }
                 }
+                .appearIn()
 
-                VStack(alignment: .leading, spacing: 10) {
-                    SectionTitle(title: "Run settings", icon: "sliders-horizontal")
-                    Card(padding: 20) {
-                        VStack(alignment: .leading, spacing: 18) {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Run mode").font(.system(size: 13, weight: .semibold))
+                VStack(alignment: .leading, spacing: Space.s) {
+                    SectionTitle(title: "Run settings")
+                    Card(padding: Space.l) {
+                        VStack(alignment: .leading, spacing: Space.l) {
+                            VStack(alignment: .leading, spacing: Space.xs) {
+                                Text("Run mode").font(.dBodyMedium)
                                 Picker("Run mode", selection: Binding(
                                     get: { project.runModeOverride },
                                     set: { model.setRunMode(project.id, $0) })) {
@@ -44,38 +40,39 @@ struct ActionsView: View {
                                 .labelsHidden()
                                 .frame(maxWidth: 360, alignment: .leading)
                                 Text("How \(AppInfo.name) starts this project. Auto-detect is right for most.")
-                                    .font(.system(size: 12)).foregroundStyle(Brand.muted)
+                                    .font(.dCaption).foregroundStyle(Brand.muted)
                             }
 
                             if mode == .custom {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("Custom command").font(.system(size: 13, weight: .semibold))
+                                VStack(alignment: .leading, spacing: Space.xs) {
+                                    Text("Custom command").font(.dBodyMedium)
                                     TextField("e.g. pnpm run dev", text: $customCommand)
                                         .textFieldStyle(.roundedBorder)
-                                        .font(.system(size: 13, design: .monospaced))
+                                        .font(.dMono)
                                         .onSubmit { model.setCustomCommand(project.id, customCommand) }
                                         .onChange(of: customCommand) { _, v in model.setCustomCommand(project.id, v) }
                                     Text("Runs in the project folder. The address is read from its output.")
-                                        .font(.system(size: 12)).foregroundStyle(Brand.muted)
+                                        .font(.dCaption).foregroundStyle(Brand.muted)
                                 }
                             }
 
                             if mode == .wrangler || mode == .pages {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("Port").font(.system(size: 13, weight: .semibold))
+                                VStack(alignment: .leading, spacing: Space.xs) {
+                                    Text("Port").font(.dBodyMedium)
                                     TextField("auto", text: $portText)
                                         .textFieldStyle(.roundedBorder)
                                         .frame(width: 110)
                                         .onSubmit { commitPort() }
                                     Text("Allocated from 8787 upward when empty or busy.")
-                                        .font(.system(size: 12)).foregroundStyle(Brand.muted)
+                                        .font(.dCaption).foregroundStyle(Brand.muted)
                                 }
                             }
                         }
                     }
                 }
+                .appearIn(0.06)
             }
-            .padding(28)
+            .padding(Space.xl)
             .frame(maxWidth: 1100, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
@@ -94,38 +91,29 @@ struct ActionsView: View {
     }
 }
 
-struct ActionTile: View {
+struct ActionRow: View {
     let icon: String
     let title: String
     let subtitle: String
-    var enabled = true
     let action: () -> Void
     @State private var hover = false
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Brand.accent.opacity(enabled ? 0.12 : 0.06))
-                    Icon(icon, size: 17).foregroundStyle(enabled ? Brand.accent : Brand.faint)
-                }
-                .frame(width: 38, height: 38)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.system(size: 13.5, weight: .semibold))
-                    Text(subtitle).font(.system(size: 11.5)).foregroundStyle(Brand.muted).lineLimit(1).truncationMode(.middle)
-                }
-                Spacer(minLength: 4)
+            HStack(spacing: Space.m) {
+                Icon(icon, size: IconSize.md).foregroundStyle(Brand.muted).frame(width: IconSize.md)
+                Text(title).font(.dBodyMedium)
+                Text(subtitle).font(.dCaption).foregroundStyle(Brand.muted).lineLimit(1).truncationMode(.middle)
+                Spacer(minLength: Space.s)
+                Icon("arrow-up-right", size: IconSize.sm)
+                    .foregroundStyle(hover ? Brand.text : Brand.faint)
+                    .offset(x: hover ? 1 : 0, y: hover ? -1 : 0)
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Brand.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(hover && enabled ? Brand.accent.opacity(0.5) : Brand.border, lineWidth: 1))
-            .shadow(color: .black.opacity(hover && enabled ? 0.08 : 0.03), radius: hover ? 9 : 4, y: 2)
-            .opacity(enabled ? 1 : 0.55)
+            .padding(.horizontal, Space.m).frame(minHeight: 36)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(!enabled)
+        .hoverFill(radius: Radius.control)
         .onHover { hover = $0 }
         .animation(.easeOut(duration: 0.15), value: hover)
     }

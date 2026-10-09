@@ -12,39 +12,41 @@ struct LogsView: View {
         let all = rt.log.lines
         let lines = filter.isEmpty ? all : all.filter { $0.text.localizedCaseInsensitiveContains(filter) }
 
-        VStack(spacing: 14) {
-            HStack(spacing: 10) {
-                HStack(spacing: 8) {
-                    Icon("search", size: 14).foregroundStyle(Brand.faint)
+        VStack(spacing: Space.m) {
+            HStack(spacing: Space.s) {
+                HStack(spacing: Space.s) {
+                    Icon("search", size: IconSize.sm).foregroundStyle(Brand.faint)
                     TextField("Filter logs", text: $filter)
                         .textFieldStyle(.plain)
                         .focused($searchFocused)
                     if !filter.isEmpty {
-                        Button { filter = "" } label: { Icon("x", size: 12).foregroundStyle(Brand.faint) }.buttonStyle(.plain)
+                        Button { filter = "" } label: { Icon("x", size: 12) }.buttonStyle(.dockIcon).frame(width: 20, height: 20)
                     }
                     // Hidden button gives ⌘F its shortcut.
                     Button("") { searchFocused = true }
                         .keyboardShortcut("f", modifiers: .command)
                         .opacity(0).frame(width: 0, height: 0)
                 }
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(Brand.card, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(searchFocused ? Brand.accent.opacity(0.6) : Brand.border, lineWidth: 1))
+                .font(.dBody)
+                .padding(.horizontal, Space.m).frame(height: 28)
+                .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(searchFocused ? Brand.accent.opacity(0.6) : Brand.border, lineWidth: 1))
+                .animation(.easeOut(duration: 0.15), value: searchFocused)
 
-                Text("\(lines.count) lines").font(.system(size: 12)).foregroundStyle(Brand.muted)
+                Text("\(lines.count) lines").font(.dCaption).monospacedDigit().foregroundStyle(Brand.muted)
+                    .contentTransition(.numericText())
 
                 Button { autoScroll.toggle() } label: {
-                    Label { Text("Follow") } icon: { Icon("arrow-down-to-line", size: 13) }
+                    Label { Text("Follow") } icon: { Icon("arrow-down-to-line", size: IconSize.sm) }
                 }
                 .buttonStyle(DockToggleStyle(isOn: autoScroll))
                 .help("Auto-scroll to the newest line")
 
-                Button { rt.log.clear() } label: { Label { Text("Clear") } icon: { Icon("eraser", size: 13) } }
+                Button { rt.log.clear() } label: { Label { Text("Clear") } icon: { Icon("eraser", size: IconSize.sm) } }
                     .buttonStyle(.dockSecondary)
             }
 
             ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Brand.codeBackground)
+                RoundedRectangle(cornerRadius: Radius.panel, style: .continuous).fill(Brand.codeBackground)
                 if rt.external && all.isEmpty {
                     placeholder("terminal", "Logs unavailable",
                                 "This project was started outside \(AppInfo.name), so its output can't be captured. Stop it and start it from here to see logs.")
@@ -58,7 +60,7 @@ struct LogsView: View {
                                     LogRow(line: line).id(line.id)
                                 }
                             }
-                            .padding(14)
+                            .padding(Space.m)
                         }
                         .onChange(of: lines.last?.id) { _, last in
                             if autoScroll, let last { proxy.scrollTo(last, anchor: .bottom) }
@@ -69,19 +71,19 @@ struct LogsView: View {
                     }
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Brand.border, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: Radius.panel, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.panel, style: .continuous).strokeBorder(Brand.border, lineWidth: 1))
         }
-        .padding(24)
+        .padding(Space.xl)
     }
 
     private func placeholder(_ icon: String, _ title: String, _ detail: String) -> some View {
-        VStack(spacing: 10) {
-            Icon(icon, size: 26).foregroundStyle(Brand.faint)
-            Text(title).font(.system(size: 15, weight: .semibold))
-            Text(detail).font(.system(size: 12.5)).foregroundStyle(Brand.muted).multilineTextAlignment(.center).frame(maxWidth: 360)
+        VStack(spacing: Space.s) {
+            Icon(icon, size: IconSize.xl).foregroundStyle(Brand.faint)
+            Text(title).font(.dHeading)
+            Text(detail).font(.dCaption).foregroundStyle(Brand.muted).multilineTextAlignment(.center).frame(maxWidth: 360)
         }
-        .padding(30)
+        .padding(Space.xl)
     }
 }
 
@@ -114,12 +116,27 @@ struct DockToggleStyle: ButtonStyle {
     let isOn: Bool
 
     func makeBody(configuration: Configuration) -> some View {
+        ToggleBody(isOn: isOn, configuration: configuration)
+    }
+}
+
+private struct ToggleBody: View {
+    let isOn: Bool
+    let configuration: ButtonStyleConfiguration
+    @State private var hover = false
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
         configuration.label
-            .font(.system(size: 13, weight: .semibold))
-            .padding(.horizontal, 12).padding(.vertical, 8)
+            .font(.dBodyMedium)
+            .padding(.horizontal, Space.m).frame(height: 28)
             .foregroundStyle(isOn ? Brand.accent : Brand.muted)
-            .background(isOn ? Brand.accent.opacity(0.12) : Brand.card, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(isOn ? Brand.accent.opacity(0.4) : Brand.border, lineWidth: 1))
-            .opacity(configuration.isPressed ? 0.8 : 1)
+            .background(hover ? Brand.hover : .clear, in: shape)
+            .overlay(shape.strokeBorder(isOn ? Brand.accent.opacity(0.5) : Brand.border, lineWidth: 1))
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .contentShape(shape)
+            .onHover { hover = $0 }
+            .animation(.easeOut(duration: 0.12), value: hover)
+            .animation(.easeOut(duration: 0.12), value: isOn)
     }
 }

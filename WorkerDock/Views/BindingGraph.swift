@@ -9,7 +9,7 @@ struct BindingGraph: View {
     let varNames: [String]
     let status: ProjectStatus
 
-    private struct Node: Identifiable {
+    fileprivate struct Node: Identifiable {
         let id: String
         let icon: String
         let color: Color
@@ -92,51 +92,51 @@ struct BindingGraph: View {
 
     private var workerCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 9) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Brand.cloudflare.gradient)
-                    Icon("cloud", size: 17).foregroundStyle(.white)
-                }
-                .frame(width: 32, height: 32)
+            HStack(spacing: Space.s) {
+                Icon("cloud", size: IconSize.lg).foregroundStyle(Brand.cloudflare)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(workerName).font(.system(size: 13.5, weight: .semibold)).lineLimit(1)
-                    Text("Worker").font(.system(size: 11)).foregroundStyle(Brand.muted)
+                    Text(workerName).font(.dBodyMedium).lineLimit(1)
+                    Text("Worker").font(.dCaption).foregroundStyle(Brand.muted)
                 }
             }
             if let entry {
-                Text(entry).font(.system(size: 11, design: .monospaced)).foregroundStyle(Brand.muted).lineLimit(1).truncationMode(.middle)
+                Text(entry).font(.dMono).foregroundStyle(Brand.muted).lineLimit(1).truncationMode(.middle)
             }
         }
-        .padding(12)
+        .padding(Space.m)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(Brand.cardRaised, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Brand.cloudflare.opacity(running ? 0.7 : 0.3), lineWidth: 1.2))
-        .shadow(color: Brand.cloudflare.opacity(running ? 0.18 : 0), radius: 10)
+        .background(Brand.cardRaised, in: RoundedRectangle(cornerRadius: Radius.panel, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.panel, style: .continuous).strokeBorder(Brand.cloudflare.opacity(running ? 0.7 : 0.3), lineWidth: 1.2))
+        .animation(.easeOut(duration: 0.3), value: running)
     }
 
     private func nodeCard(_ node: Node) -> some View {
-        HStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous).fill(node.color.opacity(0.14))
-                Icon(node.icon, size: 15).foregroundStyle(node.color)
-            }
-            .frame(width: 30, height: 30)
+        NodeCard(node: node, height: rowH)
+    }
+}
+
+private struct NodeCard: View {
+    let node: BindingGraph.Node
+    let height: CGFloat
+    @State private var hover = false
+
+    var body: some View {
+        HStack(spacing: Space.m) {
+            Icon(node.icon, size: IconSize.md).foregroundStyle(node.color).frame(width: IconSize.md)
             VStack(alignment: .leading, spacing: 1) {
-                Text(node.title).font(.system(size: 12.5, weight: .semibold, design: .monospaced)).lineLimit(1)
+                Text(node.title).font(.system(size: 12, weight: .medium, design: .monospaced)).lineLimit(1)
                 if let sub = node.subtitle {
-                    Text(sub).font(.system(size: 11)).foregroundStyle(Brand.muted).lineLimit(1)
+                    Text(sub).font(.dCaption).foregroundStyle(Brand.muted).lineLimit(1)
                 }
             }
-            Spacer(minLength: 6)
-            Text(node.tag)
-                .font(.system(size: 10.5, weight: .semibold))
-                .padding(.horizontal, 7).padding(.vertical, 3)
-                .foregroundStyle(node.color)
-                .background(node.color.opacity(0.12), in: Capsule())
+            Spacer(minLength: Space.s)
+            Text(node.tag).font(.dCaption).foregroundStyle(Brand.muted)
         }
-        .padding(.horizontal, 12)
-        .frame(height: rowH)
-        .background(Brand.cardRaised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Brand.border, lineWidth: 1))
+        .padding(.horizontal, Space.m)
+        .frame(height: height)
+        .background(hover ? Brand.hover : Brand.cardRaised, in: RoundedRectangle(cornerRadius: Radius.panel, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.panel, style: .continuous).strokeBorder(hover ? node.color.opacity(0.6) : Brand.border, lineWidth: 1))
+        .onHover { hover = $0 }
+        .animation(.easeOut(duration: 0.15), value: hover)
     }
 }
