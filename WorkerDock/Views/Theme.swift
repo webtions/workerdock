@@ -163,8 +163,8 @@ extension Font {
 
 extension Brand {
     /// Flat interaction fills that adapt to light and dark.
-    static let hover = Brand.text.opacity(0.05)
-    static let selection = Brand.text.opacity(0.09)
+    static let hover = Brand.text.opacity(0.045)
+    static let selection = Brand.text.opacity(0.13)
 }
 
 // MARK: - Building blocks

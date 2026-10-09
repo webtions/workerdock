@@ -117,12 +117,15 @@ struct Project: Codable, Identifiable, Hashable {
     /// Root folder this was discovered under; nil when added manually.
     var rootPath: String?
     var hidden: Bool = false
+    /// Optional so registries saved before favourites existed still load.
+    var favorite: Bool?
     var port: Int?
     var inspectorPort: Int?
     var runModeOverride: RunModeKind?
     var customCommand: String?
 
     var id: String { path }
+    var isFavorite: Bool { favorite == true }
     var url: URL { URL(fileURLWithPath: path) }
 }
 

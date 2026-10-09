@@ -39,6 +39,7 @@ final class AppModel {
             let path = (e.folder as NSString).expandingTildeInPath
             var p = Project(path: path, configFile: e.config, name: e.name, rootPath: (path as NSString).deletingLastPathComponent)
             p.port = e.port
+            if e.name == "aurora-api" || e.name == "meridian-docs" { p.favorite = true }
             ps.append(p)
             var info = ProjectInfo()
             info.configKind = ConfigParser.kind(forFile: e.config)
@@ -243,6 +244,10 @@ final class AppModel {
     func setRunMode(_ id: String, _ mode: RunModeKind?) { update(id) { $0.runModeOverride = mode } }
     func setCustomCommand(_ id: String, _ cmd: String) { update(id) { $0.customCommand = cmd } }
     func setPort(_ id: String, _ port: Int?) { update(id) { $0.port = port } }
+    func setFavorite(_ id: String, _ favorite: Bool) {
+        update(id) { $0.favorite = favorite ? true : nil }
+    }
+
     func setHidden(_ id: String, _ hidden: Bool) {
         update(id) { $0.hidden = hidden }
         if hidden && selection == id { selection = visibleProjects.first?.id }

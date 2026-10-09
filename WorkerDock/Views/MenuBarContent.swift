@@ -11,8 +11,11 @@ struct MenuBarContent: View {
             Text("No projects yet")
         } else {
             // Running projects first, then the rest, each group alphabetical.
-            let running = projects.filter { model.runtime($0.id).status.isActive }
-            let others = projects.filter { !model.runtime($0.id).status.isActive }
+            let favorites = projects.filter { $0.isFavorite }
+            let running = projects.filter { !$0.isFavorite && model.runtime($0.id).status.isActive }
+            let others = projects.filter { !$0.isFavorite && !model.runtime($0.id).status.isActive }
+            ForEach(favorites) { ProjectMenu(project: $0) }
+            if !favorites.isEmpty && !(running.isEmpty && others.isEmpty) { Divider() }
             ForEach(running) { ProjectMenu(project: $0) }
             if !running.isEmpty && !others.isEmpty { Divider() }
             ForEach(others) { ProjectMenu(project: $0) }

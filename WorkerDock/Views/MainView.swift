@@ -92,30 +92,35 @@ struct SidebarView: View {
     var body: some View {
         @Bindable var model = model
         let projects = filtered
-        let running = projects.filter { model.runtime($0.id).status.isActive }
-        let others = projects.filter { !model.runtime($0.id).status.isActive }
+        let favorites = projects.filter { $0.isFavorite }
+        let running = projects.filter { !$0.isFavorite && model.runtime($0.id).status.isActive }
+        let others = projects.filter { !$0.isFavorite && !model.runtime($0.id).status.isActive }
 
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 2) {
+                if !favorites.isEmpty {
+                    sectionHeader("Favorites", count: favorites.count)
+                    ForEach(favorites) { row($0) }
+                }
                 if !running.isEmpty {
                     sectionHeader("Running", count: running.count)
                     ForEach(running) { row($0) }
                 }
                 if !others.isEmpty {
-                    sectionHeader(running.isEmpty ? "Projects" : "Stopped", count: others.count)
+                    sectionHeader(running.isEmpty && favorites.isEmpty ? "Projects" : "Stopped", count: others.count)
                     ForEach(others) { row($0) }
                 }
             }
             .padding(.horizontal, Space.s)
             .padding(.bottom, Space.m)
-            .animation(.easeOut(duration: 0.2), value: running.map(\.id))
+            .animation(.easeOut(duration: 0.2), value: (favorites + running).map(\.id))
         }
         .scrollContentBackground(.hidden)
         .background(Brand.sidebar)
         .focusable()
         .focusEffectDisabled()
         .onMoveCommand { direction in
-            let ids = (running + others).map(\.id)
+            let ids = (favorites + running + others).map(\.id)
             guard !ids.isEmpty else { return }
             let current = model.selection.flatMap { ids.firstIndex(of: $0) } ?? -1
             switch direction {
@@ -191,6 +196,7 @@ struct SidebarView: View {
             Text(title).font(.dLabel).textCase(.uppercase).tracking(0.6)
             Spacer()
             Text("\(count)").font(.dLabel).monospacedDigit().contentTransition(.numericText())
+                .frame(width: 22, alignment: .center)   // same column and width as the status dots below
         }
         .foregroundStyle(Brand.faint)
         .padding(.horizontal, Space.m).padding(.top, Space.m).padding(.bottom, Space.xs)
@@ -227,19 +233,28 @@ struct SidebarRow: View {
                     .font(.dCaption).foregroundStyle(Brand.muted).lineLimit(1)
             }
             Spacer(minLength: Space.xs)
-            ZStack {
-                if hover && rt.status != .starting {
-                    Button { active ? model.stop(project.id) : model.start(project.id) } label: {
-                        Icon(active ? "square" : "play", size: 12)
+            if hover {
+                HStack(spacing: 2) {
+                    Button { model.setFavorite(project.id, !project.isFavorite) } label: {
+                        Icon(project.isFavorite ? "star-filled" : "star", size: 12)
+                            .foregroundStyle(project.isFavorite ? Brand.warning : Brand.muted)
                     }
                     .buttonStyle(DockIconButtonStyle(size: 22))
-                    .help(active ? "Stop" : "Start")
-                    .transition(.opacity)
-                } else {
-                    StatusDot(status: rt.status, size: 7).transition(.opacity)
+                    .help(project.isFavorite ? "Remove from Favorites" : "Add to Favorites")
+                    if rt.status != .starting {
+                        Button { active ? model.stop(project.id) : model.start(project.id) } label: {
+                            Icon(active ? "square" : "play", size: 12)
+                        }
+                        .buttonStyle(DockIconButtonStyle(size: 22))
+                        .help(active ? "Stop" : "Start")
+                    }
                 }
+                .transition(.opacity)
+            } else {
+                StatusDot(status: rt.status, size: 7)
+                    .frame(width: 22, height: 22)
+                    .transition(.opacity)
             }
-            .frame(width: 22, height: 22)
         }
         .padding(.horizontal, Space.m).padding(.vertical, 6)
         .hoverFill(radius: Radius.control, selected: selected)
@@ -266,6 +281,7 @@ struct SidebarContextMenu: View {
     var body: some View {
         let active = model.runtime(project.id).status.isActive
         Button(active ? "Stop" : "Start") { active ? model.stop(project.id) : model.start(project.id) }
+        Button(project.isFavorite ? "Remove from Favorites" : "Add to Favorites") { model.setFavorite(project.id, !project.isFavorite) }
         Button("Reveal in Finder") { model.reveal(project.id) }
         Divider()
         Button(project.hidden ? "Show Project" : "Hide Project") { model.setHidden(project.id, !project.hidden) }
