@@ -32,91 +32,90 @@ struct ProjectDetailView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .id(model.selectedTab)
+                .transition(.opacity)
             }
+            .animation(.easeOut(duration: 0.18), value: model.selectedTab)
             .navigationTitle(project.name)
             .task { await model.refreshInfo(projectID) }
         }
     }
 
     private func header(_ project: Project, _ rt: ProjectRuntime, _ info: ProjectInfo?) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .center, spacing: 14) {
-                ProjectTile(icon: ProjectGlyph.icon(info), status: rt.status, size: 52)
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 10) {
-                        Text(model.displayName(project))
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .lineLimit(1)
-                        statusPill(rt)
+        let primary = ProjectKind.primary(info)
+        let extras = ProjectKind.badges(info).filter { $0 != primary }
+        return VStack(alignment: .leading, spacing: Space.m) {
+            HStack(alignment: .center, spacing: Space.m) {
+                KindIcon(badge: primary, size: IconSize.lg).foregroundStyle(Brand.text)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: Space.s) {
+                        Text(model.displayName(project)).font(.dTitle).lineLimit(1)
+                        statusLabel(rt)
                     }
-                    HStack(spacing: 6) {
-                        Icon("folder-open", size: 12).foregroundStyle(Brand.faint)
-                        Text(abbreviated(project.path)).font(.system(size: 12, design: .monospaced)).foregroundStyle(Brand.muted)
+                    HStack(spacing: Space.m) {
+                        Text(abbreviated(project.path)).font(.dMono).foregroundStyle(Brand.muted)
                             .lineLimit(1).truncationMode(.middle)
-                    }
-                    HStack(spacing: 6) {
-                        if let fw = info?.framework { Pill(text: fw, icon: "rocket", tint: Brand.accent) }
-                        if let cms = info?.cms { Pill(text: cms, icon: "file-text", tint: Color(hex: "#8B5CF6")) }
-                        if info?.pagesOutputDir != nil { Pill(text: "Pages", icon: "globe", tint: Color(hex: "#0EA5E9")) }
-                        Pill(text: model.effectiveMode(project).title, icon: "terminal", tint: Brand.muted)
+                        ForEach(extras) { badge in
+                            HStack(spacing: 5) {
+                                KindIcon(badge: badge, size: 12)
+                                Text(badge.name)
+                            }
+                            .font(.dCaption).foregroundStyle(Brand.muted)
+                        }
+                        Text(model.effectiveMode(project).title).font(.dCaption).foregroundStyle(Brand.faint)
                     }
                 }
-                Spacer(minLength: 12)
+                Spacer(minLength: Space.m)
                 controls(project, rt)
             }
 
-            HStack {
-                TabBar(selection: Bindable(model).selectedTab)
-                Spacer()
-                if rt.status == .running, rt.url != nil {
-                    HStack(spacing: 8) {
-                        if let admin = model.quickLinks(project.id).first(where: { $0 != .site }) {
-                            Button { model.open(admin, for: project.id) } label: {
-                                Label { Text("Admin Login") } icon: { Icon("user-round-key", size: 13) }
-                            }
-                            .buttonStyle(.dockSecondary)
-                        }
-                        if let url = rt.url {
-                            Button { model.openInBrowser(project.id) } label: {
-                                Label { Text(url.host.map { "\($0):\(url.port ?? 80)" } ?? url.absoluteString).font(.system(size: 12.5, weight: .semibold, design: .monospaced)) }
-                                    icon: { Icon("arrow-up-right", size: 13) }
-                            }
-                            .buttonStyle(.dockSecondary)
-                        }
-                    }
-                }
-            }
+            TabBar(selection: Bindable(model).selectedTab)
         }
-        .padding(.horizontal, 28)
-        .padding(.top, 14)
-        .padding(.bottom, 14)
+        .padding(.horizontal, Space.xl)
+        .padding(.top, Space.m)
         .background(Brand.background)
         .overlay(alignment: .bottom) { Rectangle().fill(Brand.border).frame(height: 1) }
     }
 
-    private func statusPill(_ rt: ProjectRuntime) -> some View {
+    private func statusLabel(_ rt: ProjectRuntime) -> some View {
         let (text, color): (String, Color) = {
             switch rt.status {
             case .running: return (rt.external ? "Running · attached" : "Running", Brand.success)
             case .starting: return ("Starting", Brand.warning)
             case .stopped: return ("Stopped", Brand.muted)
-            case .error: return ("Error", Brand.accent)
+            case .error: return ("Error", Brand.danger)
             }
         }()
         return HStack(spacing: 6) {
             Circle().fill(color).frame(width: 6, height: 6)
-            Text(text).font(.system(size: 11.5, weight: .semibold))
+            Text(text).font(.dCaption.weight(.medium))
         }
-        .padding(.horizontal, 9).padding(.vertical, 4)
         .foregroundStyle(color)
-        .background(color.opacity(0.13), in: Capsule())
+        .animation(.easeOut(duration: 0.2), value: text)
     }
 
     @ViewBuilder
     private func controls(_ project: Project, _ rt: ProjectRuntime) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.s) {
+            if rt.status == .running, let url = rt.url {
+                Menu {
+                    Button { model.openInBrowser(project.id) } label: {
+                        Text("Open site · \(url.host.map { "\($0):\(url.port ?? 80)" } ?? url.absoluteString)")
+                    }
+                    ForEach(model.quickLinks(project.id).filter { $0 != .site }) { link in
+                        Button(link.title) { model.open(link, for: project.id) }
+                    }
+                    Button("Open Explorer in browser") { model.openExplorer(project.id) }
+                } label: {
+                    MenuChip(title: "Open", icon: "arrow-up-right")
+                }
+                .menuStyle(.button)
+                .buttonStyle(.plain)
+                .menuIndicator(.hidden)
+                .fixedSize()
+            }
             if rt.status.isActive {
-                Button { model.restart(project.id) } label: { Label { Text("Restart") } icon: { Icon("rotate-cw", size: 13) } }
+                Button { model.restart(project.id) } label: { Label { Text("Restart") } icon: { Icon("rotate-cw", size: IconSize.sm) } }
                     .buttonStyle(.dockSecondary)
                     .disabled(!rt.managed)
                     .keyboardShortcut("r", modifiers: .command)
@@ -126,48 +125,58 @@ struct ProjectDetailView: View {
                     .keyboardShortcut(".", modifiers: .command)
                     .help("Stop (⌘.)")
             } else {
-                Button { model.start(project.id) } label: { Label { Text("Start") } icon: { Icon("play", size: 13) } }
+                Button { model.start(project.id) } label: { Label { Text("Start") } icon: { Icon("play", size: IconSize.sm) } }
                     .buttonStyle(.dockPrimary)
                     .disabled(rt.installing)
                     .keyboardShortcut(.return, modifiers: .command)
                     .help("Start (⌘↩)")
             }
         }
+        .animation(.easeOut(duration: 0.2), value: rt.status)
     }
 }
 
-/// Apple-style segmented control with a raised selected chip.
+/// Flat tabs with a sliding underline.
 struct TabBar: View {
     @Binding var selection: DetailTab
     @Namespace private var ns
 
     var body: some View {
-        HStack(spacing: 2) {
-            ForEach(DetailTab.allCases) { tab in
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { selection = tab }
-                } label: {
-                    HStack(spacing: 6) {
-                        Icon(tab.icon, size: 13)
-                        Text(tab.rawValue).font(.system(size: 12.5, weight: .semibold))
-                    }
-                    .padding(.horizontal, 12).padding(.vertical, 6)
-                    .foregroundStyle(selection == tab ? Brand.text : Brand.muted)
-                    .background {
-                        if selection == tab {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(Brand.card)
-                                .shadow(color: .black.opacity(0.10), radius: 3, y: 1)
-                                .matchedGeometryEffect(id: "tab", in: ns)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
+        HStack(spacing: Space.xl) {
+            ForEach(DetailTab.allCases) { tab in TabItem(tab: tab, selected: selection == tab, ns: ns) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { selection = tab }
+            } }
+            Spacer()
         }
-        .padding(3)
-        .background(Brand.border.opacity(0.55), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+    }
+}
+
+private struct TabItem: View {
+    let tab: DetailTab
+    let selected: Bool
+    let ns: Namespace.ID
+    let action: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Icon(tab.icon, size: IconSize.sm)
+                Text(tab.rawValue).font(.dBodyMedium)
+            }
+            .foregroundStyle(selected || hover ? Brand.text : Brand.muted)
+            .padding(.vertical, Space.s)
+            .overlay(alignment: .bottom) {
+                if selected {
+                    Rectangle().fill(Brand.accent).frame(height: 2)
+                        .matchedGeometryEffect(id: "underline", in: ns)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .animation(.easeOut(duration: 0.12), value: hover)
     }
 }
 
