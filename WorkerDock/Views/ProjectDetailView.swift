@@ -90,7 +90,10 @@ struct ProjectDetailView: View {
                 controls(project, rt)
             }
 
-            TabBar(selection: Bindable(model).selectedTab)
+            HStack(alignment: .center) {
+                TabBar(selection: Bindable(model).selectedTab)
+                if rt.status.isActive, let bytes = rt.memoryBytes { MemoryBadge(bytes: bytes) }
+            }
         }
         .padding(.horizontal, Space.xl)
         .padding(.top, Space.m)
@@ -204,4 +207,28 @@ private struct TabItem: View {
 
 func abbreviated(_ path: String) -> String {
     (path as NSString).abbreviatingWithTildeInPath
+}
+
+/// Memory used by the project, coloured by how heavy it is. Sits at the end of the tab row so it stays visible on every tab.
+struct MemoryBadge: View {
+    let bytes: UInt64
+
+    private var mb: Double { Double(bytes) / 1_048_576 }
+    private var color: Color {
+        if mb < 400 { return Brand.success }
+        if mb < 800 { return Brand.warning }
+        return Brand.danger
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Icon("memory-stick", size: IconSize.sm)
+            Text(Format.bytes(bytes)).font(.dBodyMedium).monospacedDigit().contentTransition(.numericText())
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, Space.s).frame(height: 24)
+        .background(color.opacity(0.12), in: Capsule())
+        .animation(.easeOut(duration: 0.3), value: color)
+        .help("Memory used by this project, including workerd")
+    }
 }

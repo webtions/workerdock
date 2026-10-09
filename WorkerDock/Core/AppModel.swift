@@ -62,8 +62,6 @@ final class AppModel {
             if e.status == .running, let port = e.port {
                 rt.url = URL(string: "http://localhost:\(port)")
                 rt.memoryBytes = UInt64(e.memoryMB * 1_048_576)
-                rt.startedAt = Date().addingTimeInterval(-(2 * 3600 + 14 * 60))
-                rt.memoryHistory = (0..<40).map { i in e.memoryMB * (0.9 + 0.08 * sin(Double(i) / 4) + 0.001 * Double(i)) }
             }
             for line in (e.name == "aurora-api" ? DemoData.aLogs : ["▶ ready", "[wrangler:info] Ready on http://localhost:\(e.port ?? 8787)"]) {
                 rt.log.append(line)
@@ -602,7 +600,7 @@ final class AppModel {
         }
         rt.attachedPID = nil
         rt.url = nil
-        rt.memoryBytes = nil; rt.memoryHistory = []; rt.startedAt = nil
+        rt.memoryBytes = nil
         rt.status = (intentional || code == 0) ? .stopped : .error("Exited with code \(code)")
         removeRunning(id)
     }
@@ -646,7 +644,7 @@ final class AppModel {
                 rt.attachedPID = nil
                 rt.externalPIDs = []
                 rt.url = nil
-                rt.memoryBytes = nil; rt.memoryHistory = []; rt.startedAt = nil
+                rt.memoryBytes = nil
                 rt.status = .stopped
             }
         }
@@ -796,25 +794,18 @@ final class AppModel {
         return p.terminationStatus == 0
     }
 
-    // MARK: - Memory (only called while the Overview tab is visible)
+    // MARK: - Memory (measured every few seconds while a project is on screen)
 
     func updateMemory(_ id: String) async {
         guard !isDemo else { return }
         let rt = runtime(id)
-        guard rt.status == .running || rt.status == .starting else {
-            rt.memoryBytes = nil; rt.memoryHistory = []; rt.startedAt = nil
-            return
-        }
+        guard rt.status == .running || rt.status == .starting else { rt.memoryBytes = nil; return }
         let pid = rt.pid
         let ext = rt.externalPIDs
-        let (bytes, start) = await Task.detached(priority: .utility) { () -> (UInt64, UInt64?) in
-            if let pid { return (ProcessInspector.groupResidentBytes(pgid: pid_t(pid)), ProcessInspector.startSec(of: pid_t(pid))) }
-            return (ext.reduce(0) { $0 + ProcessInspector.residentBytes(pid_t($1)) },
-                    ext.compactMap { ProcessInspector.startSec(of: pid_t($0)) }.min())
+        let bytes = await Task.detached(priority: .utility) { () -> UInt64 in
+            if let pid { return ProcessInspector.groupResidentBytes(pgid: pid_t(pid)) }
+            return ext.reduce(0) { $0 + ProcessInspector.residentBytes(pid_t($1)) }
         }.value
         rt.memoryBytes = bytes
-        rt.memoryHistory.append(Double(bytes) / 1_048_576)
-        if rt.memoryHistory.count > 60 { rt.memoryHistory.removeFirst(rt.memoryHistory.count - 60) }
-        if rt.startedAt == nil, let start { rt.startedAt = Date(timeIntervalSince1970: TimeInterval(start)) }
     }
 }
