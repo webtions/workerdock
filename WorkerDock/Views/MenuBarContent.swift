@@ -10,9 +10,12 @@ struct MenuBarContent: View {
         if projects.isEmpty {
             Text("No projects yet")
         } else {
-            ForEach(projects) { project in
-                ProjectMenu(project: project)
-            }
+            // Running projects first, then the rest, each group alphabetical.
+            let running = projects.filter { model.runtime($0.id).status.isActive }
+            let others = projects.filter { !model.runtime($0.id).status.isActive }
+            ForEach(running) { ProjectMenu(project: $0) }
+            if !running.isEmpty && !others.isEmpty { Divider() }
+            ForEach(others) { ProjectMenu(project: $0) }
         }
 
         Divider()
@@ -35,6 +38,7 @@ struct MenuBarContent: View {
 
 struct ProjectMenu: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
     let project: Project
 
     var body: some View {
@@ -43,9 +47,12 @@ struct ProjectMenu: View {
         let title = "\(rt.status == .running ? "●" : rt.status == .starting ? "◐" : "○")  \(project.name)" + (port.map { "  :\($0)" } ?? "")
 
         Menu(title) {
-            Toggle("Running", isOn: Binding(
-                get: { rt.status.isActive },
-                set: { on in on ? model.start(project.id) : model.stop(project.id) }))
+            if rt.status.isActive {
+                Button("Stop") { model.stop(project.id) }
+                Button("Restart") { model.restart(project.id) }
+            } else {
+                Button("Start") { model.start(project.id) }
+            }
             Divider()
             Button("Open in Browser") { model.openInBrowser(project.id) }
                 .disabled(rt.status != .running)
@@ -54,6 +61,12 @@ struct ProjectMenu: View {
             ForEach(model.quickLinks(project.id).filter { $0 != .site }) { link in
                 Button(link.title) { model.open(link, for: project.id) }
                     .disabled(rt.status != .running)
+            }
+            Divider()
+            Button("Show in WorkerDock") {
+                model.selection = project.id
+                openWindow(id: "main")
+                NSApp.activate(ignoringOtherApps: true)
             }
         }
     }
