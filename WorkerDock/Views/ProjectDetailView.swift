@@ -62,6 +62,21 @@ struct ProjectDetailView: View {
                     HStack(spacing: Space.m) {
                         Text(abbreviated(project.path)).font(.dMono).foregroundStyle(Brand.muted)
                             .lineLimit(1).truncationMode(.middle)
+                        if rt.status == .running, let url = rt.url {
+                            if let admin = model.quickLinks(project.id).first(where: { $0 != .site }) {
+                                Button { model.open(admin, for: project.id) } label: {
+                                    Label { Text("Admin Login") } icon: { Icon("user-round-key", size: 12) }
+                                }
+                                .buttonStyle(.dockSecondaryCompact)
+                                .help("Open \(admin.path)")
+                            }
+                            Button { model.openInBrowser(project.id) } label: {
+                                Label { Text(url.host.map { "\($0):\(url.port ?? 80)" } ?? url.absoluteString).font(.dMono) }
+                                    icon: { Icon("arrow-up-right", size: 12) }
+                            }
+                            .buttonStyle(.dockSecondaryCompact)
+                            .help("Open the site in your browser")
+                        }
                         if rt.status.isActive, let bytes = rt.memoryBytes {
                             HStack(spacing: 5) {
                                 Icon("memory-stick", size: IconSize.sm).foregroundStyle(Brand.muted)
@@ -91,58 +106,29 @@ struct ProjectDetailView: View {
         .overlay(alignment: .bottom) { Rectangle().fill(Brand.border).frame(height: 1) }
     }
 
-    /// Just the state.
+    /// State pill: icon and word on a soft tint of the state colour.
     private func statusLabel(_ rt: ProjectRuntime) -> some View {
-        let (text, color): (String, Color) = {
+        let (text, icon, color): (String, String, Color) = {
             switch rt.status {
-            case .running: return ("Running", Brand.success)
-            case .starting: return ("Starting", Brand.warning)
-            case .stopped: return ("Stopped", Brand.muted)
-            case .error: return ("Error", Brand.danger)
+            case .running: return ("Running", "zap", Brand.success)
+            case .starting: return ("Starting", "clock", Brand.warning)
+            case .stopped: return ("Stopped", "power", Brand.muted)
+            case .error: return ("Error", "triangle-alert", Brand.danger)
             }
         }()
-        return HStack(spacing: 6) {
-            Circle().fill(color).frame(width: 6, height: 6)
-            Text(text).font(.dCaption.weight(.medium)).foregroundStyle(color)
+        return HStack(spacing: 5) {
+            Icon(icon, size: 12)
+            Text(text).font(.dCaption.weight(.medium))
         }
+        .foregroundStyle(color)
+        .padding(.horizontal, Space.s).frame(height: 22)
+        .background(color.opacity(0.12), in: Capsule())
         .animation(.easeOut(duration: 0.2), value: text)
     }
 
     @ViewBuilder
     private func controls(_ project: Project, _ rt: ProjectRuntime) -> some View {
         HStack(spacing: Space.s) {
-            if rt.status == .running, let url = rt.url {
-                // One click each for the two things used most: the admin login (EmDash) and the site itself.
-                if let admin = model.quickLinks(project.id).first(where: { $0 != .site }) {
-                    Button { model.open(admin, for: project.id) } label: {
-                        Label { Text("Admin Login") } icon: { Icon("user-round-key", size: IconSize.sm) }
-                    }
-                    .buttonStyle(.dockSecondary)
-                    .help("Open \(admin.path)")
-                }
-                Button { model.openInBrowser(project.id) } label: {
-                    Label { Text(url.host.map { "\($0):\(url.port ?? 80)" } ?? url.absoluteString).font(.dMono) }
-                        icon: { Icon("arrow-up-right", size: IconSize.sm) }
-                }
-                .buttonStyle(.dockSecondary)
-                .help("Open the site in your browser")
-            }
-            Menu {
-                if rt.status == .running {
-                    Button("Open Explorer in browser") { model.openExplorer(project.id) }
-                    Divider()
-                }
-                Button("Reveal in Finder") { model.reveal(project.id) }
-                Button("Open in \(model.settings.editorCommand.isEmpty ? (model.editorApp?.name ?? "Editor") : "Editor")") { model.openInEditor(project.id) }
-                Button("Open in \(model.terminalApp?.name ?? "Terminal")") { model.openTerminal(project.id) }
-            } label: {
-                Icon("ellipsis", size: IconSize.sm)
-            }
-            .menuStyle(.button)
-            .buttonStyle(DockIconButtonStyle(size: 28))
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .help("More")
             if rt.status.isActive {
                 Button { model.restart(project.id) } label: { Label { Text("Restart") } icon: { Icon("rotate-cw", size: IconSize.sm) } }
                     .buttonStyle(.dockSecondary)
@@ -159,6 +145,22 @@ struct ProjectDetailView: View {
                     .keyboardShortcut(.return, modifiers: .command)
                     .help(model.info(project.id) != nil && !model.depsReady(project) ? "Install dependencies first" : "Start (⌘↩)")
             }
+            Menu {
+                if rt.status == .running {
+                    Button("Open Explorer in browser") { model.openExplorer(project.id) }
+                    Divider()
+                }
+                Button("Reveal in Finder") { model.reveal(project.id) }
+                Button("Open in \(model.settings.editorCommand.isEmpty ? (model.editorApp?.name ?? "Editor") : "Editor")") { model.openInEditor(project.id) }
+                Button("Open in \(model.terminalApp?.name ?? "Terminal")") { model.openTerminal(project.id) }
+            } label: {
+                Icon("ellipsis-vertical", size: IconSize.sm)
+            }
+            .menuStyle(.button)
+            .buttonStyle(DockIconButtonStyle(size: 28))
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("More")
         }
         .animation(.easeOut(duration: 0.2), value: rt.status)
     }

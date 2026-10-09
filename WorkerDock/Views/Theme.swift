@@ -240,14 +240,16 @@ struct HoverFill: ViewModifier {
 struct DockButtonStyle: ButtonStyle {
     enum Kind { case primary, secondary, danger }
     var kind: Kind = .secondary
+    var compact = false
 
     func makeBody(configuration: Configuration) -> some View {
-        DockButtonBody(kind: kind, configuration: configuration)
+        DockButtonBody(kind: kind, compact: compact, configuration: configuration)
     }
 }
 
 private struct DockButtonBody: View {
     let kind: DockButtonStyle.Kind
+    let compact: Bool
     let configuration: ButtonStyleConfiguration
     @Environment(\.isEnabled) private var enabled
     @State private var hover = false
@@ -255,8 +257,8 @@ private struct DockButtonBody: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
         configuration.label
-            .font(.dBodyMedium)
-            .padding(.horizontal, Space.m).frame(height: 28)
+            .font(compact ? .dCaption.weight(.medium) : .dBodyMedium)
+            .padding(.horizontal, compact ? Space.s : Space.m).frame(height: compact ? 24 : 28)
             .foregroundStyle(foreground)
             .background(fill, in: shape)
             .overlay(shape.strokeBorder(stroke, lineWidth: 1))
@@ -298,6 +300,7 @@ extension ButtonStyle where Self == DockButtonStyle {
     static var dockPrimary: DockButtonStyle { DockButtonStyle(kind: .primary) }
     static var dockSecondary: DockButtonStyle { DockButtonStyle(kind: .secondary) }
     static var dockDanger: DockButtonStyle { DockButtonStyle(kind: .danger) }
+    static var dockSecondaryCompact: DockButtonStyle { DockButtonStyle(kind: .secondary, compact: true) }
 }
 
 /// Square icon-only button with a hover fill.
