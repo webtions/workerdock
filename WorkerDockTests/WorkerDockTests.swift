@@ -81,6 +81,20 @@ final class ParsingTests: XCTestCase {
         XCTAssertEqual(OutputParser.detectURL(in: "  ➜  Local:   http://localhost:5173/", mode: .vite)?.port, 5173)
     }
 
+    func testPortInUseIsDetected() {
+        XCTAssertEqual(OutputParser.detectPortInUse(in: "✘ [ERROR] Address already in use (127.0.0.1:8788). Please check"), 8788)
+        XCTAssertEqual(OutputParser.detectPortInUse(in: "Error: listen EADDRINUSE: address already in use :::4321"), 4321)
+        XCTAssertEqual(OutputParser.detectPortInUse(in: "Port 5173 is already in use"), 5173)
+        XCTAssertNil(OutputParser.detectPortInUse(in: "[wrangler:info] Ready on http://localhost:8787"))
+        XCTAssertNil(OutputParser.detectPortInUse(in: "GET /api/ports 200 OK"))
+    }
+
+    func testRunDevPassesPortToTheScript() {
+        XCTAssertEqual(PackageManager.npm.runDev(port: 8790), "npm run dev -- --port 8790")
+        XCTAssertEqual(PackageManager.pnpm.runDev(port: 8790), "pnpm run dev --port 8790")
+        XCTAssertEqual(PackageManager.yarn.runDev(port: nil), "yarn dev")
+    }
+
     func testAstroAlreadyRunningLineIsParsed() {
         let line = #"{"message":"Dev server already running at http://localhost:4321 (pid 35873)\n  Stop:   astro dev stop","level":"info"}"#
         let r = OutputParser.detectAlreadyRunning(in: line)

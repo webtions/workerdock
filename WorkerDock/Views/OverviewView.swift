@@ -13,7 +13,9 @@ struct OverviewView: View {
                 if let info {
                     if let err = info.parseError { banner(err, icon: "triangle-alert", tint: Brand.warning) }
                     if !model.depsReady(project) { installBanner(rt, info) }
-                    if case .error(let message) = rt.status, model.depsReady(project) || message != "Dependencies not installed" {
+                    if case .error = rt.status, let conflict = rt.portConflict {
+                        portBanner(conflict)
+                    } else if case .error(let message) = rt.status, model.depsReady(project) || message != "Dependencies not installed" {
                         banner(message, icon: "circle-x", tint: Brand.danger)
                     }
                 }
@@ -67,6 +69,28 @@ struct OverviewView: View {
         }
         .padding(Space.m)
         .overlay(RoundedRectangle(cornerRadius: Radius.panel, style: .continuous).strokeBorder(Brand.warning.opacity(0.5), lineWidth: 1))
+    }
+
+    /// The project's port is taken: say by whom, and offer a way out.
+    private func portBanner(_ conflict: PortConflict) -> some View {
+        HStack(spacing: Space.m) {
+            Icon("circle-x", size: IconSize.lg).foregroundStyle(Brand.danger)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Port \(conflict.port) is already in use").font(.dBodyMedium)
+                Text(conflict.ownerName.map { "\($0) is using it. Stop it, or start this project on a different port." }
+                     ?? "Another program is using it. Close it, or start this project on a different port.")
+                    .font(.dCaption).foregroundStyle(Brand.muted)
+            }
+            Spacer()
+            if let ownerID = conflict.ownerID, let name = conflict.ownerName {
+                Button { model.selection = ownerID } label: { Text("Show \(name)") }
+                    .buttonStyle(.dockSecondary)
+            }
+            Button { model.startOnFreePort(project.id) } label: { Text("Start on a free port") }
+                .buttonStyle(.dockPrimary)
+        }
+        .padding(Space.m)
+        .overlay(RoundedRectangle(cornerRadius: Radius.panel, style: .continuous).strokeBorder(Brand.danger.opacity(0.5), lineWidth: 1))
     }
 
     private func banner(_ text: String, icon: String, tint: Color) -> some View {

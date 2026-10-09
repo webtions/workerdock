@@ -1,6 +1,23 @@
 import Foundation
 
 enum OutputParser {
+    /// The port from "Address already in use (127.0.0.1:8788)", EADDRINUSE or "Port 4321 is in use" messages.
+    static func detectPortInUse(in text: String) -> Int? {
+        let lower = text.lowercased()
+        let patterns: [String]
+        if lower.contains("address already in use") || lower.contains("eaddrinuse") {
+            patterns = [":(\\d{2,5})(?!.*:\\d{2,5})"]
+        } else if lower.contains("is already in use") || lower.contains("is in use") {
+            patterns = ["port (\\d{2,5})"]
+        } else { return nil }
+        for pattern in patterns {
+            if let re = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+               let m = re.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+               let r = Range(m.range(at: 1), in: text), let port = Int(text[r]) { return port }
+        }
+        return nil
+    }
+
     private static let ansi = try! NSRegularExpression(
         pattern: "\u{1B}\\[[0-9;?]*[ -/]*[@-~]|\u{1B}\\][^\u{07}\u{1B}]*(?:\u{07}|\u{1B}\\\\)|\u{1B}[()][A-Za-z0-9]|\u{1B}[=>]")
     private static let ready = try! NSRegularExpression(pattern: "Ready on (https?://[^\\s]+)")

@@ -452,14 +452,22 @@ final class AppModel {
     // MARK: - Start / stop
 
     func start(_ id: String) { Task { await startAsync(id) } }
+
+    /// Starts a project on a port nobody else is using, for when its default is taken.
+    func startOnFreePort(_ id: String) {
+        let used = Set(projects.compactMap { runtime($0.id).status.isActive ? runtime($0.id).port : nil })
+        let taken = used.union([runtime(id).portConflict?.port].compactMap { $0 })
+        let port = PortAllocator.allocate(start: 8787, avoiding: taken)
+        Task { await startAsync(id, onPort: port) }
+    }
     func stop(_ id: String) { Task { await stopAsync(id) } }
     func restart(_ id: String) { Task { await restartAsync(id) } }
 
-    func startAsync(_ id: String) async {
+    func startAsync(_ id: String, onPort forcedPort: Int? = nil) async {
         guard let p = project(id) else { return }
         let rt = runtime(id)
         guard !rt.status.isActive else { return }
-        guard let info = infos[id] else { await refreshInfo(id); return await startAsync(id) }
+        guard let info = infos[id] else { await refreshInfo(id); return await startAsync(id, onPort: forcedPort) }
 
         let mode = effectiveMode(p)
         let command: String
@@ -475,8 +483,8 @@ final class AppModel {
             }
             if mode == .wrangler || mode == .pages {
                 let others = Set(projects.filter { $0.id != id }.flatMap { [$0.port, $0.inspectorPort].compactMap { $0 } })
-                var port = p.port ?? 0
-                if port == 0 || !PortAllocator.isFree(port) || others.contains(port) {
+                var port = forcedPort ?? p.port ?? 0
+                if port == 0 || !PortAllocator.isFree(port) || (forcedPort == nil && others.contains(port)) {
                     port = PortAllocator.allocate(start: 8787, avoiding: others)
                 }
                 var ip = p.inspectorPort ?? 0
@@ -491,7 +499,7 @@ final class AppModel {
                     command = "\(info.packageManager.execWrangler) dev --port \(port) --inspector-port \(ip)"
                 }
             } else {
-                command = info.packageManager.runDev
+                command = info.packageManager.runDev(port: forcedPort)
             }
         case .custom:
             let c = (p.customCommand ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -509,6 +517,7 @@ final class AppModel {
         rt.external = false
         rt.attachedPID = nil
         rt.sawAlreadyRunning = false
+        rt.portConflict = nil
         rt.log.append("▶ \(command)")
 
         do {
@@ -564,6 +573,11 @@ final class AppModel {
         let rt = runtime(id)
         guard !text.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         rt.log.append(text, isError: isErr)
+        if let port = OutputParser.detectPortInUse(in: text) {
+            // Another project of ours may be the one holding it.
+            let owner = projects.first { $0.id != id && runtime($0.id).status.isActive && runtime($0.id).port == port }
+            rt.portConflict = PortConflict(port: port, ownerID: owner?.id, ownerName: owner.map { displayName($0) })
+        }
         if let (url, pid) = OutputParser.detectAlreadyRunning(in: text) {
             // The tool refused to start a second server; adopt the one that's already up.
             rt.url = url

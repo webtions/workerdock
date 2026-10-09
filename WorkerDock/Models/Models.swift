@@ -83,13 +83,19 @@ enum PackageManager: String, Codable, CaseIterable {
         case .bun: return "bunx wrangler"
         }
     }
-    var runDev: String {
+    var runDev: String { runDev(port: nil) }
+
+    /// The dev script, optionally with `--port N` passed through to the tool the script ends with.
+    func runDev(port: Int?) -> String {
+        let base: String
         switch self {
-        case .npm: return "npm run dev"
-        case .pnpm: return "pnpm run dev"
-        case .yarn: return "yarn dev"
-        case .bun: return "bun run dev"
+        case .npm: base = "npm run dev"
+        case .pnpm: base = "pnpm run dev"
+        case .yarn: base = "yarn dev"
+        case .bun: base = "bun run dev"
         }
+        guard let port else { return base }
+        return self == .npm ? "\(base) -- --port \(port)" : "\(base) --port \(port)"
     }
     var install: String { "\(rawValue) install" }
 
@@ -263,8 +269,16 @@ final class LogBuffer {
     func clear() { lines.removeAll() }
 }
 
+/// A dev server that couldn't start because its port is taken, and who has it if we know.
+struct PortConflict: Equatable {
+    var port: Int
+    var ownerID: String?
+    var ownerName: String?
+}
+
 @Observable
 final class ProjectRuntime {
+    var portConflict: PortConflict?
     var status: ProjectStatus = .stopped
     var url: URL?
     var pid: Int32?
