@@ -87,6 +87,7 @@ final class AppModel {
 
     func bootstrap() {
         applyAppearance()
+        refreshInstalledApps()
         Task {
             if isDemo {
                 loadDemoState()
@@ -707,10 +708,21 @@ final class AppModel {
         NSWorkspace.shared.activateFileViewerSelecting([p.url])
     }
 
+    // MARK: - Terminal and editor apps
+
+    private(set) var installedTerminals: [ExternalApp] = AppCatalog.installed(AppCatalog.terminals)
+
+    func refreshInstalledApps() {
+        installedTerminals = AppCatalog.installed(AppCatalog.terminals)
+    }
+
+    /// The terminal that "Open Terminal" uses: the saved choice, else the first one installed.
+    var terminalApp: ExternalApp? { AppCatalog.resolve(settings.terminalApp, among: installedTerminals) }
+
     func openTerminal(_ id: String) {
         guard let p = project(id) else { return }
-        NSWorkspace.shared.open([p.url], withApplicationAt: URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app"),
-                                configuration: NSWorkspace.OpenConfiguration())
+        guard let app = terminalApp else { showError("No terminal app found. Choose one in Settings."); return }
+        NSWorkspace.shared.open([p.url], withApplicationAt: app.url, configuration: NSWorkspace.OpenConfiguration())
     }
 
     func openInEditor(_ id: String) {

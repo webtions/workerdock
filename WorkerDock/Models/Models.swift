@@ -289,7 +289,9 @@ enum AppearanceMode: String, Codable, CaseIterable, Identifiable {
 
 struct AppSettings: Codable, Equatable {
     var appearance = AppearanceMode.system
-    var editorCommand = "code"
+    var terminalApp = ""     // bundle id or path; empty = automatic
+    var editorApp = ""       // bundle id or path; empty = automatic
+    var editorCommand = ""   // optional shell command that overrides editorApp
     var nodePath = ""
     var watchRoots = false
 
@@ -297,7 +299,11 @@ struct AppSettings: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         appearance = try c.decodeIfPresent(AppearanceMode.self, forKey: .appearance) ?? .system
-        editorCommand = try c.decodeIfPresent(String.self, forKey: .editorCommand) ?? "code"
+        terminalApp = try c.decodeIfPresent(String.self, forKey: .terminalApp) ?? ""
+        editorApp = try c.decodeIfPresent(String.self, forKey: .editorApp) ?? ""
+        // "code" used to be the default command; it is now covered by automatic detection.
+        let legacy = try c.decodeIfPresent(String.self, forKey: .editorCommand) ?? ""
+        editorCommand = legacy == "code" ? "" : legacy
         nodePath = try c.decodeIfPresent(String.self, forKey: .nodePath) ?? ""
         watchRoots = try c.decodeIfPresent(Bool.self, forKey: .watchRoots) ?? false
     }

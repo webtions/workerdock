@@ -110,7 +110,7 @@ struct ProjectDetailView: View {
                 }
                 Button("Reveal in Finder") { model.reveal(project.id) }
                 Button("Open in Editor") { model.openInEditor(project.id) }
-                Button("Open Terminal Here") { model.openTerminal(project.id) }
+                Button("Open in \(model.terminalApp?.name ?? "Terminal")") { model.openTerminal(project.id) }
             } label: {
                 MenuChip(title: "Open", icon: "arrow-up-right")
             }

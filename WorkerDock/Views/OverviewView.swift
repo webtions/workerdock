@@ -84,7 +84,7 @@ struct OverviewView: View {
             Spacer()
             Button { copyToPasteboard(command) } label: { Label { Text("Copy command") } icon: { Icon("copy", size: IconSize.sm) } }
                 .buttonStyle(.dockSecondary)
-            Button { model.openTerminal(project.id) } label: { Label { Text("Open Terminal") } icon: { Icon("terminal", size: IconSize.sm) } }
+            Button { model.openTerminal(project.id) } label: { Label { Text("Open in \(model.terminalApp?.name ?? "Terminal")") } icon: { Icon("terminal", size: IconSize.sm) } }
                 .buttonStyle(.dockSecondary)
         }
         .padding(Space.m)

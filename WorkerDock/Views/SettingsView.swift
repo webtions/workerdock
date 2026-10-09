@@ -33,6 +33,11 @@ struct SettingsView: View {
                 Toggle("Watch folders for new projects (FSEvents)", isOn: $model.settings.watchRoots)
             }
 
+            Section("Terminal") {
+                AppPicker(title: "Open Terminal with", selection: $model.settings.terminalApp,
+                          installed: model.installedTerminals, automatic: model.installedTerminals.first?.name)
+            }
+
             Section("Editor") {
                 TextField("Command", text: $model.settings.editorCommand, prompt: Text("code"))
                     .font(.body.monospaced())
@@ -71,5 +76,42 @@ struct SettingsView: View {
     private var pathPreview: String {
         let path = model.environment["PATH"] ?? ""
         return "PATH: " + path.split(separator: ":").prefix(4).joined(separator: ":") + "…"
+    }
+}
+
+/// Dropdown of installed apps with an Automatic entry and an "Other…" file chooser.
+struct AppPicker: View {
+    let title: String
+    @Binding var selection: String
+    let installed: [ExternalApp]
+    let automatic: String?
+    private static let other = "__other__"
+
+    private var custom: ExternalApp? {
+        guard !selection.isEmpty, !installed.contains(where: { $0.id == selection }) else { return nil }
+        return AppCatalog.app(atPath: selection)
+    }
+
+    var body: some View {
+        Picker(title, selection: Binding(get: { selection }, set: { choose($0) })) {
+            Text("Automatic" + (automatic.map { " (\($0))" } ?? "")).tag("")
+            Divider()
+            ForEach(installed) { app in
+                Label { Text(app.name) } icon: { Image(nsImage: app.icon) }.tag(app.id)
+            }
+            if let custom {
+                Label { Text(custom.name) } icon: { Image(nsImage: custom.icon) }.tag(custom.id)
+            }
+            Divider()
+            Text("Other…").tag(Self.other)
+        }
+    }
+
+    private func choose(_ value: String) {
+        if value == Self.other {
+            if let path = AppCatalog.chooseApp() { selection = path }
+        } else {
+            selection = value
+        }
     }
 }
