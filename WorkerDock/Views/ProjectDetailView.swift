@@ -62,6 +62,14 @@ struct ProjectDetailView: View {
                     HStack(spacing: Space.m) {
                         Text(abbreviated(project.path)).font(.dMono).foregroundStyle(Brand.muted)
                             .lineLimit(1).truncationMode(.middle)
+                        if rt.status.isActive, let bytes = rt.memoryBytes {
+                            HStack(spacing: 5) {
+                                Icon("memory-stick", size: IconSize.sm).foregroundStyle(Brand.muted)
+                                Text(Format.bytes(bytes)).font(.dBodyMedium).monospacedDigit()
+                                    .contentTransition(.numericText())
+                            }
+                            .help("Memory used by this project, including workerd")
+                        }
                         ForEach(extras) { badge in
                             HStack(spacing: 5) {
                                 KindIcon(badge: badge, size: 12)
@@ -96,11 +104,6 @@ struct ProjectDetailView: View {
         return HStack(spacing: 6) {
             Circle().fill(color).frame(width: 6, height: 6)
             Text(text).font(.dCaption.weight(.medium)).foregroundStyle(color)
-            if rt.status.isActive, let bytes = rt.memoryBytes {
-                Text(Format.bytes(bytes)).font(.dCaption).foregroundStyle(Brand.muted).monospacedDigit()
-                    .contentTransition(.numericText())
-                    .help("Memory used by this project, including workerd")
-            }
         }
         .animation(.easeOut(duration: 0.2), value: text)
     }
