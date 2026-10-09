@@ -113,6 +113,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_START"] != nil {
             NSApp.setActivationPolicy(.prohibited)   // headless debug run: no window, no second app icon
         }
+        // WORKERDOCK_WIDTH resizes the window shortly after launch, so screenshots can check narrow layouts.
+        if let w = Double(ProcessInfo.processInfo.environment["WORKERDOCK_WIDTH"] ?? "") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                NSApp.windows.first(where: { $0.canBecomeMain })?.setContentSize(NSSize(width: w, height: 760))
+            }
+        }
         AppUpdater.shared.start()
         AppModel.shared.bootstrap()
     }

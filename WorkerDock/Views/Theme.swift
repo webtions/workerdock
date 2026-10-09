@@ -431,15 +431,20 @@ struct PillShape: ViewModifier {
             .foregroundStyle(tint)
             .padding(.horizontal, Space.s).frame(height: 22)
             .background(tint.opacity(0.12), in: Capsule())
+            .fixedSize()
     }
 }
 
-/// Neutral chip, for labels like the project type.
+/// Neutral outlined chip for labels like the project type: card colour with a hairline, like the app's other outlined controls.
 struct Pill: View {
     let text: String
 
     var body: some View {
         Text(text).font(.dCaption.weight(.medium))
-            .modifier(PillShape(tint: Brand.muted))
+            .foregroundStyle(Brand.muted)
+            .padding(.horizontal, Space.s).frame(height: 22)
+            .background(Brand.card, in: Capsule())
+            .overlay(Capsule().strokeBorder(Brand.border, lineWidth: 1))
+            .fixedSize()
     }
 }

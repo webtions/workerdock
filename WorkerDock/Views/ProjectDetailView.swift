@@ -52,23 +52,34 @@ struct ProjectDetailView: View {
     private func header(_ project: Project, _ rt: ProjectRuntime, _ info: ProjectInfo?) -> some View {
         let primary = ProjectKind.primary(info)
         let kinds = (ProjectKind.badges(info).isEmpty ? [ProjectKind.worker] : ProjectKind.badges(info)).map(\.name)
+        // Second line: path and type on the left, actions on the right. On narrow windows the actions drop below.
+        let meta = HStack(spacing: Space.m) {
+            Text(abbreviated(project.path)).font(.dMono).foregroundStyle(Brand.muted)
+                .lineLimit(1).truncationMode(.middle)
+            ForEach(kinds, id: \.self) { Pill(text: $0) }
+        }
         return VStack(alignment: .leading, spacing: Space.l) {
-            HStack(alignment: .center, spacing: Space.l) {
+            HStack(alignment: .top, spacing: Space.l) {
                 KindIcon(badge: primary, size: IconSize.xl).foregroundStyle(Brand.text)
+                    .padding(.top, Space.xs)
                 VStack(alignment: .leading, spacing: Space.s) {
                     HStack(spacing: Space.s) {
-                        Text(model.displayName(project)).font(.dLargeTitle).lineLimit(1)
+                        Text(model.displayName(project)).font(.dLargeTitle).lineLimit(1).layoutPriority(-1)
                         statusLabel(rt)
                         if rt.status.isActive, let bytes = rt.memoryBytes { MemoryBadge(bytes: bytes) }
                     }
-                    HStack(spacing: Space.m) {
-                        Text(abbreviated(project.path)).font(.dMono).foregroundStyle(Brand.muted)
-                            .lineLimit(1).truncationMode(.middle)
-                        ForEach(kinds, id: \.self) { Pill(text: $0) }
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .center, spacing: Space.m) {
+                            meta
+                            Spacer(minLength: Space.l)
+                            controls(project, rt)
+                        }
+                        VStack(alignment: .leading, spacing: Space.m) {
+                            meta
+                            controls(project, rt)
+                        }
                     }
                 }
-                Spacer(minLength: Space.m)
-                controls(project, rt)
             }
 
             TabBar(selection: Bindable(model).selectedTab)
@@ -102,6 +113,12 @@ struct ProjectDetailView: View {
     private func controls(_ project: Project, _ rt: ProjectRuntime) -> some View {
         HStack(spacing: Space.s) {
             if rt.status == .running, let url = rt.url {
+                Button { model.openInBrowser(project.id) } label: {
+                    Label { Text(url.host.map { "\($0):\(url.port ?? 80)" } ?? url.absoluteString) }
+                        icon: { Icon("arrow-up-right", size: IconSize.sm) }
+                }
+                .buttonStyle(.dockSecondary)
+                .help("Open the site in your browser")
                 if let admin = model.quickLinks(project.id).first(where: { $0 != .site }) {
                     Button { model.open(admin, for: project.id) } label: {
                         Label { Text("Admin Login") } icon: { Icon("user-round-key", size: IconSize.sm) }
@@ -109,12 +126,6 @@ struct ProjectDetailView: View {
                     .buttonStyle(.dockSecondary)
                     .help("Open \(admin.path)")
                 }
-                Button { model.openInBrowser(project.id) } label: {
-                    Label { Text(url.host.map { "\($0):\(url.port ?? 80)" } ?? url.absoluteString).font(.dMono) }
-                        icon: { Icon("arrow-up-right", size: IconSize.sm) }
-                }
-                .buttonStyle(.dockSecondary)
-                .help("Open the site in your browser")
             }
             if rt.status.isActive {
                 Button { model.restart(project.id) } label: { Label { Text("Restart") } icon: { Icon("rotate-cw", size: IconSize.sm) } }
