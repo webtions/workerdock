@@ -1,14 +1,14 @@
 import SwiftUI
 
 enum DetailTab: String, CaseIterable, Identifiable {
-    case overview = "Overview", logs = "Logs", explorer = "Explorer", actions = "Actions"
+    case overview = "Overview", logs = "Logs", explorer = "Explorer", settings = "Settings"
     var id: String { rawValue }
     var icon: String {
         switch self {
         case .overview: return "layout-dashboard"
         case .logs: return "scroll-text"
         case .explorer: return "compass"
-        case .actions: return "sliders-horizontal"
+        case .settings: return "sliders-horizontal"
         }
     }
 }
@@ -28,7 +28,7 @@ struct ProjectDetailView: View {
                     case .overview: OverviewView(project: project)
                     case .logs: LogsView(project: project)
                     case .explorer: ExplorerView(project: project)
-                    case .actions: ActionsView(project: project)
+                    case .settings: ProjectSettingsView(project: project)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -97,8 +97,8 @@ struct ProjectDetailView: View {
     @ViewBuilder
     private func controls(_ project: Project, _ rt: ProjectRuntime) -> some View {
         HStack(spacing: Space.s) {
-            if rt.status == .running, let url = rt.url {
-                Menu {
+            Menu {
+                if rt.status == .running, let url = rt.url {
                     Button { model.openInBrowser(project.id) } label: {
                         Text("Open site · \(url.host.map { "\($0):\(url.port ?? 80)" } ?? url.absoluteString)")
                     }
@@ -106,14 +106,18 @@ struct ProjectDetailView: View {
                         Button(link.title) { model.open(link, for: project.id) }
                     }
                     Button("Open Explorer in browser") { model.openExplorer(project.id) }
-                } label: {
-                    MenuChip(title: "Open", icon: "arrow-up-right")
+                    Divider()
                 }
-                .menuStyle(.button)
-                .buttonStyle(.plain)
-                .menuIndicator(.hidden)
-                .fixedSize()
+                Button("Reveal in Finder") { model.reveal(project.id) }
+                Button("Open in Editor") { model.openInEditor(project.id) }
+                Button("Open Terminal Here") { model.openTerminal(project.id) }
+            } label: {
+                MenuChip(title: "Open", icon: "arrow-up-right")
             }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
             if rt.status.isActive {
                 Button { model.restart(project.id) } label: { Label { Text("Restart") } icon: { Icon("rotate-cw", size: IconSize.sm) } }
                     .buttonStyle(.dockSecondary)
