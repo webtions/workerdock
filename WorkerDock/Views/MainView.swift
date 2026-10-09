@@ -81,6 +81,8 @@ private func trustRow(_ icon: String, _ text: String) -> some View {
 struct SidebarView: View {
     @Environment(AppModel.self) private var model
     @State private var query = ""
+    /// The one row the mouse is over. A single value for the whole list, so a stale highlight can't linger.
+    @State private var hoveredID: String?
     @FocusState private var searchFocused: Bool
 
     private var filtered: [Project] {
@@ -117,6 +119,8 @@ struct SidebarView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Brand.sidebar)
+        .onHover { if !$0 { hoveredID = nil } }
+        .onChange(of: (favorites + running + others).map(\.id)) { _, _ in hoveredID = nil }
         .focusable()
         .focusEffectDisabled()
         .onMoveCommand { direction in
@@ -203,7 +207,7 @@ struct SidebarView: View {
     }
 
     private func row(_ project: Project) -> some View {
-        SidebarRow(project: project, selected: model.selection == project.id)
+        SidebarRow(project: project, selected: model.selection == project.id, hoveredID: $hoveredID)
             .contextMenu { SidebarContextMenu(project: project) }
             .transition(.opacity)
     }
@@ -213,7 +217,8 @@ struct SidebarRow: View {
     @Environment(AppModel.self) private var model
     let project: Project
     let selected: Bool
-    @State private var hover = false
+    @Binding var hoveredID: String?
+    private var hover: Bool { hoveredID == project.id }
 
     var body: some View {
         let rt = model.runtime(project.id)
@@ -257,10 +262,14 @@ struct SidebarRow: View {
             }
         }
         .padding(.horizontal, Space.m).padding(.vertical, 6)
-        .hoverFill(radius: Radius.control, selected: selected)
+        .background(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+            .fill(selected ? Brand.selection : (hover ? Brand.hover : .clear)))
         .contentShape(Rectangle())
         .onTapGesture { model.selection = project.id }
-        .onHover { hover = $0 }
+        .onHover { inside in
+            if inside { hoveredID = project.id } else if hoveredID == project.id { hoveredID = nil }
+        }
+        .animation(.easeOut(duration: 0.12), value: selected)
         .animation(.easeOut(duration: 0.12), value: hover)
     }
 
