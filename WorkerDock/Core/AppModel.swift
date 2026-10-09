@@ -530,6 +530,13 @@ final class AppModel {
 
     func restartAsync(_ id: String) async {
         let rt = runtime(id)
+        if rt.external && !rt.managed {
+            // Started from a terminal: stop it, wait for it to disappear, then start it here.
+            guard stopExternal(id, restart: true) else { return }
+            for _ in 0..<80 where rt.status.isActive || rt.external { try? await Task.sleep(nanoseconds: 100_000_000) }
+            await startAsync(id)
+            return
+        }
         guard rt.managed else { return }
         await processManager.stop(id: id)
         // wait for the exit handler to flip state
@@ -632,15 +639,19 @@ final class AppModel {
         }
     }
 
-    private func stopExternal(_ id: String) {
+    /// Asks first, then quits a project that was started outside WorkerDock. Returns false if the user cancels.
+    @discardableResult
+    private func stopExternal(_ id: String, restart: Bool = false) -> Bool {
         let rt = runtime(id)
-        guard let p = project(id) else { return }
+        guard let p = project(id) else { return false }
         let alert = NSAlert()
-        alert.messageText = "Stop \(p.name)?"
-        alert.informativeText = "This project wasn't started by \(AppInfo.name) (probably from a terminal). Stopping it will send a quit signal to its wrangler/workerd processes."
-        alert.addButton(withTitle: "Stop")
+        alert.messageText = restart ? "Restart \(p.name)?" : "Stop \(p.name)?"
+        alert.informativeText = restart
+            ? "This project wasn't started by \(AppInfo.name) (probably from a terminal). It will be stopped and started again from here, so its logs become available."
+            : "This project wasn't started by \(AppInfo.name) (probably from a terminal). Stopping it will send a quit signal to its wrangler/workerd processes."
+        alert.addButton(withTitle: restart ? "Restart" : "Stop")
         alert.addButton(withTitle: "Cancel")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        guard alert.runModal() == .alertFirstButtonReturn else { return false }
         let pids = rt.externalPIDs
         for pid in pids { kill(pid_t(pid), SIGTERM) }
         rt.attachedPID = nil
@@ -648,6 +659,7 @@ final class AppModel {
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             await refreshExternal()
         }
+        return true
     }
 
     // MARK: - Orphans from a previous crash

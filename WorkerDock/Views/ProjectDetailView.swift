@@ -45,11 +45,11 @@ struct ProjectDetailView: View {
         let primary = ProjectKind.primary(info)
         let extras = ProjectKind.badges(info).filter { $0 != primary }
         return VStack(alignment: .leading, spacing: Space.m) {
-            HStack(alignment: .center, spacing: Space.m) {
-                KindIcon(badge: primary, size: IconSize.lg).foregroundStyle(Brand.text)
+            HStack(alignment: .center, spacing: Space.l) {
+                KindIcon(badge: primary, size: IconSize.xl).foregroundStyle(Brand.text)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: Space.s) {
-                        Text(model.displayName(project)).font(.dTitle).lineLimit(1)
+                        Text(model.displayName(project)).font(.dLargeTitle).lineLimit(1)
                         statusLabel(rt)
                     }
                     HStack(spacing: Space.m) {
@@ -121,9 +121,8 @@ struct ProjectDetailView: View {
             if rt.status.isActive {
                 Button { model.restart(project.id) } label: { Label { Text("Restart") } icon: { Icon("rotate-cw", size: IconSize.sm) } }
                     .buttonStyle(.dockSecondary)
-                    .disabled(!rt.managed)
                     .keyboardShortcut("r", modifiers: .command)
-                    .help(rt.managed ? "Restart (⌘R)" : "Started outside \(AppInfo.name), so it can only be stopped here")
+                    .help(rt.managed ? "Restart (⌘R)" : "Restart from \(AppInfo.name) so its logs are available (⌘R)")
                 Button { model.stop(project.id) } label: { Label { Text("Stop") } icon: { Icon("square", size: 12) } }
                     .buttonStyle(.dockDanger)
                     .keyboardShortcut(".", modifiers: .command)

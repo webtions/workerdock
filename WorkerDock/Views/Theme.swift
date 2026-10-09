@@ -151,6 +151,7 @@ enum IconSize {
 }
 
 extension Font {
+    static let dLargeTitle = Font.system(size: 26, weight: .semibold)
     static let dTitle = Font.system(size: 20, weight: .semibold)
     static let dHeading = Font.system(size: 15, weight: .semibold)
     static let dBody = Font.system(size: 13)
