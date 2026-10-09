@@ -17,6 +17,9 @@ struct SettingsView: View {
                 Toggle("Show icon in the Dock", isOn: $model.settings.showDockIcon)
                 Text("Turn off to keep \(AppInfo.name) in the menu bar only.")
                     .font(.caption).foregroundStyle(.secondary)
+                if let support = AppInfo.supportURL {
+                    Link("Support \(AppInfo.name)", destination: support)
+                }
             }
 
             Section("Project folders") {
@@ -36,6 +39,10 @@ struct SettingsView: View {
                     Button("Rescan Now") { model.rescan() }.disabled(model.roots.isEmpty || model.isScanning)
                 }
                 Toggle("Watch folders for new projects (FSEvents)", isOn: $model.settings.watchRoots)
+            }
+
+            Section("Access") {
+                FolderAccessRows()
             }
 
             Section("Terminal") {
@@ -153,5 +160,46 @@ struct LoginItemToggle: View {
             self.error = "Couldn't change this: \(error.localizedDescription). Move \(AppInfo.name) to the Applications folder and try again."
         }
         status = SMAppService.mainApp.status
+    }
+}
+
+/// Shows whether macOS lets the app read each project folder. Needed because some places (Documents, Desktop,
+/// Downloads, external drives) ask for permission the first time.
+struct FolderAccessRows: View {
+    @Environment(AppModel.self) private var model
+    @State private var blocked: Set<String> = []
+
+    var body: some View {
+        Group {
+            if model.roots.isEmpty {
+                Text("Add a project folder above and its access status shows here.").font(.caption).foregroundStyle(.secondary)
+            }
+            ForEach(model.roots, id: \.self) { root in
+                HStack {
+                    Text(abbreviated(root)).font(.body.monospaced()).lineLimit(1).truncationMode(.middle)
+                    Spacer()
+                    if blocked.contains(root) {
+                        Label("No access", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).font(.caption)
+                    } else {
+                        Label("Allowed", systemImage: "checkmark.circle.fill").foregroundStyle(.green).font(.caption)
+                    }
+                }
+            }
+            if !blocked.isEmpty {
+                Text("macOS is blocking \(AppInfo.name) from reading some folders. Allow it under Privacy & Security → Files and Folders (or Full Disk Access), then press Check again.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            HStack {
+                Button("Check again") { check() }
+                Button("Open Privacy Settings") {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders")!)
+                }
+            }
+        }
+        .onAppear { check() }
+    }
+
+    private func check() {
+        blocked = Set(model.roots.filter { (try? FileManager.default.contentsOfDirectory(atPath: $0)) == nil })
     }
 }
