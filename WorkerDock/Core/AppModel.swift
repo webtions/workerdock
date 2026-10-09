@@ -433,7 +433,7 @@ final class AppModel {
     func startAsync(_ id: String) async {
         guard let p = project(id) else { return }
         let rt = runtime(id)
-        guard !rt.status.isActive, !rt.installing else { return }
+        guard !rt.status.isActive else { return }
         guard let info = infos[id] else { await refreshInfo(id); return await startAsync(id) }
 
         let mode = effectiveMode(p)
@@ -585,48 +585,6 @@ final class AppModel {
                 rt.url = URL(string: "http://localhost:\(port)")
             }
         }
-    }
-
-    // MARK: - Dependencies
-
-    func installDependencies(_ id: String) async {
-        guard let p = project(id), let info = infos[id] else { return }
-        let rt = runtime(id)
-        guard !rt.installing else { return }
-        rt.installing = true
-        let command = info.packageManager.install
-        let installDir = info.packageRoot ?? p.path
-        rt.log.append("▶ \(command)  (in \(abbreviated(installDir)))")
-        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-            Task {
-                do {
-                    _ = try await processManager.start(
-                        id: "install:\(id)", command: command, cwd: installDir, env: environment,
-                        onLine: { [weak self] text, isErr in
-                            DispatchQueue.main.async {
-                                MainActor.assumeIsolated {
-                                    if !text.trimmingCharacters(in: .whitespaces).isEmpty {
-                                        self?.runtime(id).log.append(text, isError: isErr)
-                                    }
-                                }
-                            }
-                        },
-                        onExit: { code, _ in
-                            DispatchQueue.main.async {
-                                MainActor.assumeIsolated {
-                                    AppModel.shared.runtime(id).log.append("■ install finished (code \(code))")
-                                }
-                                cont.resume()
-                            }
-                        })
-                } catch {
-                    rt.log.append("✖ \(error.localizedDescription)", isError: true)
-                    cont.resume()
-                }
-            }
-        }
-        rt.installing = false
-        await refreshInfo(id)
     }
 
     // MARK: - External (terminal-started) processes

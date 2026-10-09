@@ -66,20 +66,26 @@ struct OverviewView: View {
 
     // MARK: Pieces
 
+    /// WorkerDock never installs anything: it shows the command and leaves running it to the user (or their agent).
     private func installBanner(_ rt: ProjectRuntime, _ info: ProjectInfo) -> some View {
-        HStack(spacing: Space.m) {
+        let command = info.packageManager.install
+        let dir = info.packageRoot.map(abbreviated) ?? abbreviated(project.path)
+        return HStack(spacing: Space.m) {
             Icon("package", size: IconSize.lg).foregroundStyle(Brand.warning)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Dependencies not installed").font(.dBodyMedium)
-                Text("Run `\(info.packageManager.install)` to get this project ready.").font(.dCaption).foregroundStyle(Brand.muted)
+                HStack(spacing: Space.xs) {
+                    Text("Run").font(.dCaption).foregroundStyle(Brand.muted)
+                    Text(command).font(.dMono)
+                    Text("in \(dir), then start the project.").font(.dCaption).foregroundStyle(Brand.muted)
+                }
+                .lineLimit(1)
             }
             Spacer()
-            if rt.installing {
-                ProgressView().controlSize(.small)
-            } else {
-                Button { Task { await model.installDependencies(project.id) } } label: { Label { Text("Install") } icon: { Icon("download", size: IconSize.sm) } }
-                    .buttonStyle(.dockPrimary)
-            }
+            Button { copyToPasteboard(command) } label: { Label { Text("Copy command") } icon: { Icon("copy", size: IconSize.sm) } }
+                .buttonStyle(.dockSecondary)
+            Button { model.openTerminal(project.id) } label: { Label { Text("Open Terminal") } icon: { Icon("terminal", size: IconSize.sm) } }
+                .buttonStyle(.dockSecondary)
         }
         .padding(Space.m)
         .overlay(RoundedRectangle(cornerRadius: Radius.panel, style: .continuous).strokeBorder(Brand.warning.opacity(0.5), lineWidth: 1))

@@ -131,9 +131,9 @@ struct ProjectDetailView: View {
             } else {
                 Button { model.start(project.id) } label: { Label { Text("Start") } icon: { Icon("play", size: IconSize.sm) } }
                     .buttonStyle(.dockPrimary)
-                    .disabled(rt.installing)
+                    .disabled(model.info(project.id) != nil && !model.depsReady(project))
                     .keyboardShortcut(.return, modifiers: .command)
-                    .help("Start (⌘↩)")
+                    .help(model.info(project.id) != nil && !model.depsReady(project) ? "Install dependencies first" : "Start (⌘↩)")
             }
         }
         .animation(.easeOut(duration: 0.2), value: rt.status)
