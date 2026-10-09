@@ -421,3 +421,25 @@ func showError(_ message: String) {
     alert.messageText = message
     alert.runModal()
 }
+
+/// Shared look for the small status chips in the header: same height, same text size, soft tint of one colour.
+struct PillShape: ViewModifier {
+    let tint: Color
+
+    func body(content: Content) -> some View {
+        content
+            .foregroundStyle(tint)
+            .padding(.horizontal, Space.s).frame(height: 22)
+            .background(tint.opacity(0.12), in: Capsule())
+    }
+}
+
+/// Neutral chip, for labels like the project type.
+struct Pill: View {
+    let text: String
+
+    var body: some View {
+        Text(text).font(.dCaption.weight(.medium))
+            .modifier(PillShape(tint: Brand.muted))
+    }
+}

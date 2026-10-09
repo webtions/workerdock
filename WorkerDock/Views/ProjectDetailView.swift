@@ -51,11 +51,11 @@ struct ProjectDetailView: View {
 
     private func header(_ project: Project, _ rt: ProjectRuntime, _ info: ProjectInfo?) -> some View {
         let primary = ProjectKind.primary(info)
-        let kindLabel = (ProjectKind.badges(info).isEmpty ? [ProjectKind.worker] : ProjectKind.badges(info)).map(\.name).joined(separator: " · ")
-        return VStack(alignment: .leading, spacing: Space.m) {
+        let kinds = (ProjectKind.badges(info).isEmpty ? [ProjectKind.worker] : ProjectKind.badges(info)).map(\.name)
+        return VStack(alignment: .leading, spacing: Space.l) {
             HStack(alignment: .center, spacing: Space.l) {
                 KindIcon(badge: primary, size: IconSize.xl).foregroundStyle(Brand.text)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Space.s) {
                     HStack(spacing: Space.s) {
                         Text(model.displayName(project)).font(.dLargeTitle).lineLimit(1)
                         statusLabel(rt)
@@ -64,22 +64,7 @@ struct ProjectDetailView: View {
                     HStack(spacing: Space.m) {
                         Text(abbreviated(project.path)).font(.dMono).foregroundStyle(Brand.muted)
                             .lineLimit(1).truncationMode(.middle)
-                        if rt.status == .running, let url = rt.url {
-                            if let admin = model.quickLinks(project.id).first(where: { $0 != .site }) {
-                                Button { model.open(admin, for: project.id) } label: {
-                                    Label { Text("Admin Login") } icon: { Icon("user-round-key", size: 12) }
-                                }
-                                .buttonStyle(.dockSecondaryCompact)
-                                .help("Open \(admin.path)")
-                            }
-                            Button { model.openInBrowser(project.id) } label: {
-                                Label { Text(url.host.map { "\($0):\(url.port ?? 80)" } ?? url.absoluteString).font(.dMono) }
-                                    icon: { Icon("arrow-up-right", size: 12) }
-                            }
-                            .buttonStyle(.dockSecondaryCompact)
-                            .help("Open the site in your browser")
-                        }
-                        Text(kindLabel).font(.dCaption).foregroundStyle(Brand.muted)
+                        ForEach(kinds, id: \.self) { Pill(text: $0) }
                     }
                 }
                 Spacer(minLength: Space.m)
@@ -89,7 +74,7 @@ struct ProjectDetailView: View {
             TabBar(selection: Bindable(model).selectedTab)
         }
         .padding(.horizontal, Space.xl)
-        .padding(.top, Space.m)
+        .padding(.top, Space.l)
         .background(Brand.background)
         .overlay(alignment: .bottom) { Rectangle().fill(Brand.border).frame(height: 1) }
     }
@@ -109,14 +94,28 @@ struct ProjectDetailView: View {
             Text(text).font(.dCaption.weight(.medium))
         }
         .foregroundStyle(color)
-        .padding(.horizontal, Space.s).frame(height: 22)
-        .background(color.opacity(0.12), in: Capsule())
+        .modifier(PillShape(tint: color))
         .animation(.easeOut(duration: 0.2), value: text)
     }
 
     @ViewBuilder
     private func controls(_ project: Project, _ rt: ProjectRuntime) -> some View {
         HStack(spacing: Space.s) {
+            if rt.status == .running, let url = rt.url {
+                if let admin = model.quickLinks(project.id).first(where: { $0 != .site }) {
+                    Button { model.open(admin, for: project.id) } label: {
+                        Label { Text("Admin Login") } icon: { Icon("user-round-key", size: IconSize.sm) }
+                    }
+                    .buttonStyle(.dockSecondary)
+                    .help("Open \(admin.path)")
+                }
+                Button { model.openInBrowser(project.id) } label: {
+                    Label { Text(url.host.map { "\($0):\(url.port ?? 80)" } ?? url.absoluteString).font(.dMono) }
+                        icon: { Icon("arrow-up-right", size: IconSize.sm) }
+                }
+                .buttonStyle(.dockSecondary)
+                .help("Open the site in your browser")
+            }
             if rt.status.isActive {
                 Button { model.restart(project.id) } label: { Label { Text("Restart") } icon: { Icon("rotate-cw", size: IconSize.sm) } }
                     .buttonStyle(.dockSecondary)
@@ -215,12 +214,10 @@ struct MemoryBadge: View {
 
     var body: some View {
         HStack(spacing: 5) {
-            Icon("memory-stick", size: IconSize.sm)
-            Text(Format.bytes(bytes)).font(.dBodyMedium).monospacedDigit().contentTransition(.numericText())
+            Icon("memory-stick", size: 12)
+            Text(Format.bytes(bytes)).font(.dCaption.weight(.medium)).monospacedDigit().contentTransition(.numericText())
         }
-        .foregroundStyle(color)
-        .padding(.horizontal, Space.s).frame(height: 24)
-        .background(color.opacity(0.12), in: Capsule())
+        .modifier(PillShape(tint: color))
         .animation(.easeOut(duration: 0.3), value: color)
         .help("Memory used by this project, including workerd")
     }
