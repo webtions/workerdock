@@ -19,6 +19,7 @@ struct MainView: View {
             .background(Brand.background)
         }
         .tint(Brand.accent)
+        .focusEffectDisabled()
         .toolbarBackground(.hidden, for: .windowToolbar)
         .onAppear { model.windowVisibilityChanged(true) }
         .onDisappear { model.windowVisibilityChanged(false) }
@@ -29,24 +30,21 @@ struct EmptyStateView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        VStack(spacing: 18) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Brand.accentSoft)
-                Icon("cloud", size: 34).foregroundStyle(Brand.accent)
-            }
-            .frame(width: 76, height: 76)
-            VStack(spacing: 6) {
-                Text("Add your Workers").font(.system(size: 22, weight: .bold, design: .rounded))
+        VStack(spacing: Space.l) {
+            Icon("cloud", size: IconSize.xl).foregroundStyle(Brand.accent)
+            VStack(spacing: Space.xs) {
+                Text("Add your Workers").font(.dTitle)
                 Text("Choose a folder that contains your Wrangler projects, for example ~/Sites.\n\(AppInfo.name) finds them all and keeps them in one place.")
-                    .multilineTextAlignment(.center).foregroundStyle(Brand.muted)
+                    .font(.dBody).multilineTextAlignment(.center).foregroundStyle(Brand.muted)
             }
-            HStack {
-                Button { addRoot(model) } label: { Label { Text("Add Root Folder") } icon: { Icon("folder-plus", size: 14) } }
+            HStack(spacing: Space.s) {
+                Button { addRoot(model) } label: { Label { Text("Add Root Folder") } icon: { Icon("folder-plus", size: IconSize.sm) } }
                     .buttonStyle(.dockPrimary)
-                Button { addProject(model) } label: { Label { Text("Add Single Project") } icon: { Icon("plus", size: 14) } }
+                Button { addProject(model) } label: { Label { Text("Add Single Project") } icon: { Icon("plus", size: IconSize.sm) } }
                     .buttonStyle(.dockSecondary)
             }
         }
+        .appearIn()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
@@ -68,25 +66,42 @@ struct EmptyStateView: View {
 
 struct SidebarView: View {
     @Environment(AppModel.self) private var model
+    @State private var query = ""
+    @FocusState private var searchFocused: Bool
+
+    private var filtered: [Project] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return model.visibleProjects }
+        return model.visibleProjects.filter { model.displayName($0).localizedCaseInsensitiveContains(q) }
+    }
 
     var body: some View {
         @Bindable var model = model
+        let projects = filtered
+        let running = projects.filter { model.runtime($0.id).status.isActive }
+        let others = projects.filter { !model.runtime($0.id).status.isActive }
+
         ScrollView {
-            LazyVStack(spacing: 2) {
-                ForEach(model.visibleProjects) { project in
-                    SidebarRow(project: project, selected: model.selection == project.id)
-                        .contextMenu { SidebarContextMenu(project: project) }
+            LazyVStack(alignment: .leading, spacing: 2) {
+                if !running.isEmpty {
+                    sectionHeader("Running", count: running.count)
+                    ForEach(running) { row($0) }
+                }
+                if !others.isEmpty {
+                    sectionHeader(running.isEmpty ? "Projects" : "Stopped", count: others.count)
+                    ForEach(others) { row($0) }
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 12)
+            .padding(.horizontal, Space.s)
+            .padding(.bottom, Space.m)
+            .animation(.easeOut(duration: 0.2), value: running.map(\.id))
         }
         .scrollContentBackground(.hidden)
         .background(Brand.sidebar)
         .focusable()
         .focusEffectDisabled()
         .onMoveCommand { direction in
-            let ids = model.visibleProjects.map(\.id)
+            let ids = (running + others).map(\.id)
             guard !ids.isEmpty else { return }
             let current = model.selection.flatMap { ids.firstIndex(of: $0) } ?? -1
             switch direction {
@@ -96,79 +111,81 @@ struct SidebarView: View {
             }
         }
         .overlay {
-            if model.visibleProjects.isEmpty {
-                VStack(spacing: 8) {
-                    Icon("folder-search", size: 24).foregroundStyle(Brand.faint)
-                    Text("No projects").foregroundStyle(Brand.muted)
+            if projects.isEmpty {
+                VStack(spacing: Space.s) {
+                    Icon("folder-search", size: IconSize.lg).foregroundStyle(Brand.faint)
+                    Text(query.isEmpty ? "No projects" : "No matches").font(.dBody).foregroundStyle(Brand.muted)
                 }
             }
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            HStack(spacing: 8) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Brand.accent.gradient)
-                    Icon("cloud", size: 13).foregroundStyle(.white)
+        .safeAreaInset(edge: .top, spacing: 0) { searchField }
+        .safeAreaInset(edge: .bottom, spacing: 0) { footer }
+    }
+
+    /// Add and Settings live together at the bottom of the sidebar, like Xcode and Finder.
+    private var footer: some View {
+        @Bindable var model = model
+        return HStack(spacing: Space.xs) {
+            Menu {
+                Button { addRoot(model) } label: { Label("Add Root Folder…", systemImage: "folder.badge.plus") }
+                Button { addProject(model) } label: { Label("Add Single Project…", systemImage: "plus") }
+                Divider()
+                Button { model.rescan() } label: { Label("Rescan Folders", systemImage: "arrow.clockwise") }
+                if model.hasHiddenProjects {
+                    Toggle("Show Hidden Projects", isOn: $model.showHidden)
                 }
-                .frame(width: 24, height: 24)
-                Text(AppInfo.name).font(.system(size: 14, weight: .bold, design: .rounded))
-                Spacer()
-                Text("\(model.visibleProjects.count)").font(.system(size: 11, weight: .semibold)).foregroundStyle(Brand.muted)
-                    .padding(.horizontal, 7).padding(.vertical, 2).background(Brand.border.opacity(0.7), in: Capsule())
+            } label: {
+                Icon("plus", size: IconSize.md)
             }
-            .padding(.horizontal, 16).padding(.top, 2).padding(.bottom, 8)
-        }
-        .safeAreaInset(edge: .bottom) {
+            .menuStyle(.button)
+            .buttonStyle(DockIconButtonStyle(size: 28))
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Add project or folder")
+
             if model.isScanning {
-                HStack(spacing: 8) {
-                    ProgressView().controlSize(.small)
-                    Text("Scanning folders…").font(.caption).foregroundStyle(Brand.muted)
-                }
-                .padding(10)
+                ProgressView().controlSize(.small).padding(.leading, Space.xs)
+                Text("Scanning…").font(.dCaption).foregroundStyle(Brand.muted)
+            }
+            Spacer()
+            SettingsLink { Icon("settings", size: IconSize.md) }
+                .buttonStyle(DockIconButtonStyle(size: 28))
+                .help("Settings (⌘,)")
+        }
+        .padding(.horizontal, Space.s).padding(.vertical, Space.xs)
+        .background(Brand.sidebar)
+        .overlay(alignment: .top) { Rectangle().fill(Brand.border).frame(height: 1) }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: Space.s) {
+            Icon("search", size: IconSize.sm).foregroundStyle(Brand.faint)
+            TextField("Search", text: $query).textFieldStyle(.plain).font(.dBody).focused($searchFocused)
+            if !query.isEmpty {
+                Button { query = "" } label: { Icon("x", size: 12) }.buttonStyle(.plain).foregroundStyle(Brand.faint)
             }
         }
-        .toolbar {
-            ToolbarItem {
-                Menu {
-                    Button { addRoot(model) } label: { Label("Add Root Folder…", systemImage: "folder.badge.plus") }
-                    Button { addProject(model) } label: { Label("Add Single Project…", systemImage: "plus") }
-                    Divider()
-                    Button { model.rescan() } label: { Label("Rescan Folders", systemImage: "arrow.clockwise") }
-                    if model.hasHiddenProjects {
-                        Toggle("Show Hidden Projects", isOn: $model.showHidden)
-                    }
-                } label: {
-                    Icon("plus", size: 15)
-                }
-                .focusEffectDisabled()
-            }
-        }
+        .padding(.horizontal, Space.m).frame(height: 30)
+        .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+            .strokeBorder(searchFocused ? Brand.accent.opacity(0.6) : Brand.border, lineWidth: 1))
+        .animation(.easeOut(duration: 0.15), value: searchFocused)
+        .padding(.horizontal, Space.m).padding(.bottom, Space.s)
     }
-}
 
-/// Icon that best represents a project's kind.
-enum ProjectGlyph {
-    static func icon(_ info: ProjectInfo?) -> String {
-        guard let info else { return "cloud" }
-        if info.cms == "EmDash" { return "file-text" }
-        if info.framework == "Astro" { return "rocket" }
-        if info.framework != nil { return "layout-dashboard" }
-        if info.pagesOutputDir != nil { return "globe" }
-        return "cloud"
-    }
-}
-
-struct ProjectTile: View {
-    let icon: String
-    let status: ProjectStatus
-    var size: CGFloat = 32
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-                .fill(status == .running ? Brand.accent.opacity(0.14) : Brand.border.opacity(0.55))
-            Icon(icon, size: size * 0.5).foregroundStyle(status == .running ? Brand.accent : Brand.muted)
+    private func sectionHeader(_ title: String, count: Int) -> some View {
+        HStack {
+            Text(title).font(.dLabel).textCase(.uppercase).tracking(0.6)
+            Spacer()
+            Text("\(count)").font(.dLabel).monospacedDigit().contentTransition(.numericText())
         }
-        .frame(width: size, height: size)
+        .foregroundStyle(Brand.faint)
+        .padding(.horizontal, Space.m).padding(.top, Space.m).padding(.bottom, Space.xs)
+    }
+
+    private func row(_ project: Project) -> some View {
+        SidebarRow(project: project, selected: model.selection == project.id)
+            .contextMenu { SidebarContextMenu(project: project) }
+            .transition(.opacity)
     }
 }
 
@@ -181,39 +198,41 @@ struct SidebarRow: View {
     var body: some View {
         let rt = model.runtime(project.id)
         let info = model.info(project.id)
-        HStack(spacing: 10) {
-            ProjectTile(icon: ProjectGlyph.icon(info), status: rt.status)
+        let active = rt.status.isActive
+        HStack(spacing: Space.m) {
+            KindIcon(badge: ProjectKind.primary(info), size: IconSize.md)
+                .foregroundStyle(project.hidden ? Brand.faint : (active ? Brand.text : Brand.muted))
+                .frame(width: IconSize.md)
             VStack(alignment: .leading, spacing: 1) {
                 Text(model.displayName(project))
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.dBodyMedium)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .foregroundStyle(project.hidden ? Brand.muted : Brand.text)
                 Text(subtitle(rt, info))
-                    .font(.system(size: 11)).foregroundStyle(Brand.muted).lineLimit(1)
+                    .font(.dCaption).foregroundStyle(Brand.muted).lineLimit(1)
             }
-            Spacer(minLength: 4)
-            StatusDot(status: rt.status, size: 7)
-        }
-        .padding(.horizontal, 10).padding(.vertical, 7)
-        .background {
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .fill(selected ? Brand.card : (hover ? Brand.border.opacity(0.45) : .clear))
-                .shadow(color: .black.opacity(selected ? 0.07 : 0), radius: 4, y: 1)
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .strokeBorder(selected ? Brand.border : .clear, lineWidth: 1)
-        }
-        .overlay(alignment: .leading) {
-            if selected {
-                Capsule().fill(Brand.accent).frame(width: 3, height: 18).offset(x: -1)
+            Spacer(minLength: Space.xs)
+            ZStack {
+                if hover && rt.status != .starting {
+                    Button { active ? model.stop(project.id) : model.start(project.id) } label: {
+                        Icon(active ? "square" : "play", size: 12)
+                    }
+                    .buttonStyle(DockIconButtonStyle(size: 22))
+                    .help(active ? "Stop" : "Start")
+                    .transition(.opacity)
+                } else {
+                    StatusDot(status: rt.status, size: 7).transition(.opacity)
+                }
             }
+            .frame(width: 22, height: 22)
         }
+        .padding(.horizontal, Space.m).padding(.vertical, 6)
+        .hoverFill(radius: Radius.control, selected: selected)
         .contentShape(Rectangle())
         .onTapGesture { model.selection = project.id }
         .onHover { hover = $0 }
-        .animation(.easeOut(duration: 0.12), value: selected)
+        .animation(.easeOut(duration: 0.12), value: hover)
     }
 
     private func subtitle(_ rt: ProjectRuntime, _ info: ProjectInfo?) -> String {
@@ -221,7 +240,7 @@ struct SidebarRow: View {
         switch rt.status {
         case .starting: return "Starting…"
         case .error: return "Failed to start"
-        default: return info?.framework ?? (info?.pagesOutputDir != nil ? "Pages" : "Worker")
+        default: return ProjectKind.primary(info).name
         }
     }
 }
