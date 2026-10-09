@@ -127,69 +127,142 @@ extension BindingKind {
     }
 }
 
+// MARK: - Design tokens
+
+/// One spacing scale, one radius scale, one type scale. Everything else derives from these.
+enum Space {
+    static let xs: CGFloat = 4
+    static let s: CGFloat = 8
+    static let m: CGFloat = 12
+    static let l: CGFloat = 16
+    static let xl: CGFloat = 24
+}
+
+enum Radius {
+    static let control: CGFloat = 7
+    static let panel: CGFloat = 10
+}
+
+enum IconSize {
+    static let sm: CGFloat = 14   // inline with text, buttons
+    static let md: CGFloat = 16   // list rows
+    static let lg: CGFloat = 20   // headers
+    static let xl: CGFloat = 28   // empty states
+}
+
+extension Font {
+    static let dTitle = Font.system(size: 20, weight: .semibold)
+    static let dHeading = Font.system(size: 15, weight: .semibold)
+    static let dBody = Font.system(size: 13)
+    static let dBodyMedium = Font.system(size: 13, weight: .medium)
+    static let dCaption = Font.system(size: 12)
+    static let dMono = Font.system(size: 12, design: .monospaced)
+    static let dLabel = Font.system(size: 11, weight: .semibold)
+}
+
+extension Brand {
+    /// Flat interaction fills that adapt to light and dark.
+    static let hover = Brand.text.opacity(0.05)
+    static let selection = Brand.text.opacity(0.09)
+}
+
 // MARK: - Building blocks
 
+/// Flat hairline panel. No shadow, no fill beyond the card colour.
 struct Card<Content: View>: View {
-    var padding: CGFloat = 18
+    var padding: CGFloat = Space.l
     @ViewBuilder var content: () -> Content
 
     var body: some View {
         content()
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Brand.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Brand.border, lineWidth: 1))
-            .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
+            .background(Brand.card, in: RoundedRectangle(cornerRadius: Radius.panel, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.panel, style: .continuous).strokeBorder(Brand.border, lineWidth: 1))
     }
 }
 
 struct SectionTitle: View {
     let title: String
-    var icon: String?
     var trailing: String?
 
     var body: some View {
-        HStack(spacing: 8) {
-            if let icon { Icon(icon, size: 15).foregroundStyle(Brand.muted) }
-            Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Brand.muted).textCase(.uppercase).tracking(0.6)
+        HStack {
+            Text(title).font(.dLabel).foregroundStyle(Brand.muted).textCase(.uppercase).tracking(0.6)
             Spacer()
-            if let trailing { Text(trailing).font(.system(size: 12)).foregroundStyle(Brand.faint) }
+            if let trailing { Text(trailing).font(.dCaption).foregroundStyle(Brand.faint) }
         }
     }
 }
 
-struct Pill: View {
-    let text: String
-    var icon: String?
-    var tint: Color = Brand.muted
+/// Fades and lifts a section in on first appearance. Barely noticeable; makes tab changes feel considered.
+struct AppearIn: ViewModifier {
+    var delay: Double = 0
+    @State private var shown = false
 
-    var body: some View {
-        HStack(spacing: 5) {
-            if let icon { Icon(icon, size: 11) }
-            Text(text).font(.system(size: 11.5, weight: .medium))
-        }
-        .padding(.horizontal, 9).padding(.vertical, 4)
-        .foregroundStyle(tint)
-        .background(tint.opacity(0.12), in: Capsule())
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown ? 0 : 6)
+            .onAppear { withAnimation(.easeOut(duration: 0.28).delay(delay)) { shown = true } }
     }
 }
 
-/// Rounded, brand-coloured button. `.primary` uses the accent; `.secondary` is a quiet bordered capsule.
+extension View {
+    func appearIn(_ delay: Double = 0) -> some View { modifier(AppearIn(delay: delay)) }
+
+    /// Flat hover (and optional selected) fill behind a row.
+    func hoverFill(radius: CGFloat = Radius.control, selected: Bool = false, enabled: Bool = true) -> some View {
+        modifier(HoverFill(radius: radius, selected: selected, enabled: enabled))
+    }
+}
+
+struct HoverFill: ViewModifier {
+    let radius: CGFloat
+    let selected: Bool
+    let enabled: Bool
+    @State private var hover = false
+
+    func body(content: Content) -> some View {
+        content
+            .background(RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .fill(selected ? Brand.selection : (hover && enabled ? Brand.hover : .clear)))
+            .onHover { hover = $0 }
+            .animation(.easeOut(duration: 0.12), value: hover)
+            .animation(.easeOut(duration: 0.12), value: selected)
+    }
+}
+
+/// Buttons: `.primary` is the single accent action, `.secondary` a hairline outline, `.danger` an outlined red.
 struct DockButtonStyle: ButtonStyle {
     enum Kind { case primary, secondary, danger }
     var kind: Kind = .secondary
-    @Environment(\.isEnabled) private var enabled
 
     func makeBody(configuration: Configuration) -> some View {
+        DockButtonBody(kind: kind, configuration: configuration)
+    }
+}
+
+private struct DockButtonBody: View {
+    let kind: DockButtonStyle.Kind
+    let configuration: ButtonStyleConfiguration
+    @Environment(\.isEnabled) private var enabled
+    @State private var hover = false
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
         configuration.label
-            .font(.system(size: 13, weight: .semibold))
-            .padding(.horizontal, 14).padding(.vertical, 8)
+            .font(.dBodyMedium)
+            .padding(.horizontal, Space.m).frame(height: 28)
             .foregroundStyle(foreground)
-            .background(background(configuration.isPressed), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(kind == .secondary ? Brand.border : .clear, lineWidth: 1))
-            .opacity(enabled ? 1 : 0.45)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .background(fill, in: shape)
+            .overlay(shape.strokeBorder(stroke, lineWidth: 1))
+            .opacity(enabled ? 1 : 0.4)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .contentShape(shape)
+            .onHover { hover = $0 }
+            .animation(.easeOut(duration: 0.12), value: hover)
+            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
     }
 
     private var foreground: Color {
@@ -200,11 +273,20 @@ struct DockButtonStyle: ButtonStyle {
         }
     }
 
-    private func background(_ pressed: Bool) -> Color {
+    private var fill: Color {
+        let on = hover && enabled
         switch kind {
-        case .primary: return Brand.accent.opacity(pressed ? 0.85 : 1)
-        case .secondary: return Brand.cardRaised.opacity(pressed ? 0.7 : 1)
-        case .danger: return Brand.danger.opacity(pressed ? 0.18 : 0.10)
+        case .primary: return Brand.accent.opacity(on ? 0.88 : 1)
+        case .secondary: return on ? Brand.hover : .clear
+        case .danger: return Brand.danger.opacity(on ? 0.10 : 0)
+        }
+    }
+
+    private var stroke: Color {
+        switch kind {
+        case .primary: return .clear
+        case .secondary: return Brand.border
+        case .danger: return Brand.danger.opacity(0.35)
         }
     }
 }
@@ -215,10 +297,65 @@ extension ButtonStyle where Self == DockButtonStyle {
     static var dockDanger: DockButtonStyle { DockButtonStyle(kind: .danger) }
 }
 
+/// Square icon-only button with a hover fill.
+struct DockIconButtonStyle: ButtonStyle {
+    var size: CGFloat = 24
+
+    func makeBody(configuration: Configuration) -> some View {
+        IconButtonBody(size: size, configuration: configuration)
+    }
+}
+
+private struct IconButtonBody: View {
+    let size: CGFloat
+    let configuration: ButtonStyleConfiguration
+    @State private var hover = false
+
+    var body: some View {
+        configuration.label
+            .foregroundStyle(hover ? Brand.text : Brand.muted)
+            .frame(width: size, height: size)
+            .background(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+                .fill(hover ? Brand.selection : .clear))
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .contentShape(Rectangle())
+            .onHover { hover = $0 }
+            .animation(.easeOut(duration: 0.12), value: hover)
+            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == DockIconButtonStyle {
+    static var dockIcon: DockIconButtonStyle { DockIconButtonStyle() }
+}
+
+/// Look-alike of a secondary button for use as a `Menu` label.
+struct MenuChip: View {
+    let title: String
+    let icon: String
+    @State private var hover = false
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+        HStack(spacing: 6) {
+            Icon(icon, size: IconSize.sm)
+            Text(title).font(.dBodyMedium)
+            Icon("chevron-down", size: 12).foregroundStyle(Brand.muted)
+        }
+        .padding(.horizontal, Space.m).frame(height: 28)
+        .foregroundStyle(Brand.text)
+        .background(hover ? Brand.hover : .clear, in: shape)
+        .overlay(shape.strokeBorder(Brand.border, lineWidth: 1))
+        .contentShape(shape)
+        .onHover { hover = $0 }
+        .animation(.easeOut(duration: 0.12), value: hover)
+    }
+}
+
 /// Status dot with a soft pulse while running.
 struct StatusDot: View {
     let status: ProjectStatus
-    var size: CGFloat = 9
+    var size: CGFloat = 8
     @State private var pulse = false
 
     var body: some View {
@@ -231,6 +368,7 @@ struct StatusDot: View {
             Circle().fill(color).frame(width: size, height: size)
         }
         .frame(width: size * 2, height: size * 2)
+        .animation(.easeOut(duration: 0.25), value: status)
         .onAppear { pulse = true }
         .accessibilityLabel(status.label)
     }
@@ -240,7 +378,7 @@ struct StatusDot: View {
         case .running: return Brand.success
         case .starting: return Brand.warning
         case .stopped: return Brand.faint.opacity(0.6)
-        case .error: return Brand.accent
+        case .error: return Brand.danger
         }
     }
 }
