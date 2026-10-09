@@ -4,6 +4,8 @@ A native macOS app (Swift + SwiftUI) for managing all your local Cloudflare Work
 
 > WorkerDock is an independent project and is not affiliated with or endorsed by Cloudflare.
 
+> Full project documentation (architecture, design system, release and update process, third-party tools, decisions) is in [`_docs/`](_docs/README.md).
+
 ## What it does
 
 - **Finds your projects**: add root folders (e.g. `~/Sites`); it scans for `wrangler.toml`, `wrangler.json`, `wrangler.jsonc` (skipping `node_modules`, `.wrangler`, `.git`, `dist`, `.output`, `.next`). You can also add a single project folder, and hide or remove projects.
