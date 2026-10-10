@@ -5,3 +5,4 @@ DerivedData/
 xcuserdata/
 .swiftpm/
 WorkerDock/Info.plist
+marketing/video/*.mp4
