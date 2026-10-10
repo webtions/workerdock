@@ -71,7 +71,13 @@ final class AppModel {
         projects = ps
         infos = infoMap
         roots = ["~/Sites"]
-        selection = visibleProjects.first?.id
+        // The failed demo project shows the port-conflict banner.
+        if let failed = ps.first(where: { $0.name == "orbit-queue" }), let owner = ps.first(where: { $0.name == "aurora-api" }) {
+            runtime(failed.id).portConflict = PortConflict(port: 8787, ownerID: owner.id, ownerName: "aurora-api")
+        }
+        // WORKERDOCK_DEMO_PROJECT=<name> opens that project (for screenshots).
+        let wanted = ProcessInfo.processInfo.environment["WORKERDOCK_DEMO_PROJECT"]
+        selection = ps.first(where: { $0.name == wanted })?.id ?? visibleProjects.first?.id
     }
 
     // MARK: - Lifecycle

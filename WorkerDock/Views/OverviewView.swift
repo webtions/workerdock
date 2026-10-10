@@ -76,7 +76,7 @@ struct OverviewView: View {
         HStack(spacing: Space.m) {
             Icon("circle-x", size: IconSize.lg).foregroundStyle(Brand.danger)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Port \(conflict.port) is already in use").font(.dBodyMedium)
+                Text("Port \(String(conflict.port)) is already in use").font(.dBodyMedium)
                 Text(conflict.ownerName.map { "\($0) is using it. Stop it, or start this project on a different port." }
                      ?? "Another program is using it. Close it, or start this project on a different port.")
                     .font(.dCaption).foregroundStyle(Brand.muted)
