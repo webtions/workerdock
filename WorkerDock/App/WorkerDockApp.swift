@@ -43,7 +43,7 @@ struct WorkerDockApp: App {
         MenuBarExtra {
             MenuBarContent().environment(model)
         } label: {
-            Image(nsImage: StatusBarIcon.image(running: model.runningCount > 0))
+            Image(nsImage: StatusBarIcon.image)
         }
 
         Settings {
@@ -52,16 +52,15 @@ struct WorkerDockApp: App {
     }
 }
 
-/// The menu bar mark at the size the menu bar expects. MenuBarExtra ignores SwiftUI frames on its label and uses the
-/// image's own size, so the size is set on the NSImage itself (the artwork is a 383-wide vector).
+/// The menu bar mark, the same shape as the app icon, at the size the menu bar expects. MenuBarExtra ignores SwiftUI
+/// frames on its label and uses the image's own size, so the size is set on the NSImage itself.
 enum StatusBarIcon {
-    static func image(running: Bool) -> NSImage {
-        let name = running ? "brand-workerdock-running" : "brand-workerdock-idle"
-        guard let base = NSImage(named: name), let img = base.copy() as? NSImage else { return NSImage() }
-        img.size = running ? NSSize(width: 19, height: 15.9) : NSSize(width: 19, height: 11.3)
+    static let image: NSImage = {
+        guard let base = NSImage(named: "brand-workerdock-idle"), let img = base.copy() as? NSImage else { return NSImage() }
+        img.size = NSSize(width: 19, height: 11.3)
         img.isTemplate = true
         return img
-    }
+    }()
 }
 
 struct AboutMenuButton: View {
