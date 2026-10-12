@@ -43,11 +43,11 @@ struct WorkerDockApp: App {
         MenuBarExtra {
             MenuBarContent().environment(model)
         } label: {
-            Image(model.runningCount > 0 ? "lucide-cloud-cog" : "lucide-cloud")
+            Image(model.runningCount > 0 ? "brand-workerdock-running" : "brand-workerdock-idle")
                 .renderingMode(.template)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 17, height: 17)
+                .frame(width: 22, height: model.runningCount > 0 ? 18 : 13)
         }
 
         Settings {
