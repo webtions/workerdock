@@ -47,7 +47,7 @@ struct WorkerDockApp: App {
                 .renderingMode(.template)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 22, height: model.runningCount > 0 ? 18 : 13)
+                .frame(width: 19, height: model.runningCount > 0 ? 16 : 11.5)
         }
 
         Settings {
