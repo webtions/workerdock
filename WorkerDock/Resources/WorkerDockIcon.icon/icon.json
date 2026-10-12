@@ -1,27 +1,13 @@
 {
   "fill": {
-    "solid": "srgb:1.0,0.992,0.976,1.0"
+    "automatic-gradient": "srgb:0.098,0.098,0.114,1.0"
   },
-  "fill-specializations": [
-    {
-      "appearance": "dark",
-      "value": {
-        "solid": "srgb:0.043,0.043,0.047,1.0"
-      }
-    }
-  ],
   "groups": [
     {
       "layers": [
         {
-          "image-name": "mark-light.svg",
-          "name": "mark",
-          "image-name-specializations": [
-            {
-              "appearance": "dark",
-              "value": "mark-dark.svg"
-            }
-          ]
+          "image-name": "mark-dark.svg",
+          "name": "mark"
         }
       ],
       "shadow": {
