@@ -1,13 +1,41 @@
 {
-  "fill": {
-    "automatic-gradient": "srgb:0.098,0.098,0.114,1.0"
-  },
+  "fill-specializations": [
+    {
+      "value": {
+        "solid": "srgb:1.0,1.0,1.0,1.0"
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": {
+        "solid": "srgb:0.039,0.039,0.039,1.0"
+      }
+    },
+    {
+      "appearance": "tinted",
+      "value": {
+        "solid": "srgb:0.039,0.039,0.039,1.0"
+      }
+    }
+  ],
   "groups": [
     {
       "layers": [
         {
-          "image-name": "mark-dark.svg",
-          "name": "mark"
+          "name": "mark",
+          "image-name-specializations": [
+            {
+              "value": "mark-ink.svg"
+            },
+            {
+              "appearance": "dark",
+              "value": "mark-white.svg"
+            },
+            {
+              "appearance": "tinted",
+              "value": "mark-white.svg"
+            }
+          ]
         }
       ],
       "shadow": {
