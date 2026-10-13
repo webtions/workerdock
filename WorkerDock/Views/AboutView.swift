@@ -12,7 +12,6 @@ struct AboutView: View {
                 .font(.dBody).foregroundStyle(Brand.muted).multilineTextAlignment(.center)
             HStack(spacing: Space.s) {
                 Link(destination: AppInfo.website) { Text("Website") }.buttonStyle(.dockSecondary)
-                Link(destination: AppInfo.sourceURL) { Text("Source") }.buttonStyle(.dockSecondary)
                 if let support = AppInfo.supportURL {
                     Link(destination: support) { Label { Text("Support \(AppInfo.name)") } icon: { Icon("heart", size: IconSize.sm) } }
                         .buttonStyle(.dockPrimary)
