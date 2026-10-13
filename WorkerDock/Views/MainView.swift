@@ -219,6 +219,8 @@ struct SidebarRow: View {
     let selected: Bool
     @Binding var hoveredID: String?
     private var hover: Bool { hoveredID == project.id }
+    /// Read from the model, not the copy this row was created with: a row that moves between sections can hold a stale copy.
+    private var isFavorite: Bool { model.project(project.id)?.isFavorite ?? project.isFavorite }
 
     var body: some View {
         let rt = model.runtime(project.id)
@@ -245,12 +247,12 @@ struct SidebarRow: View {
             .onTapGesture { model.selection = project.id }
             if hover {
                 HStack(spacing: 2) {
-                    Button { model.setFavorite(project.id, !project.isFavorite) } label: {
-                        Icon(project.isFavorite ? "star-filled" : "star", size: 12)
-                            .foregroundStyle(project.isFavorite ? Brand.warning : Brand.muted)
+                    Button { model.setFavorite(project.id, !isFavorite) } label: {
+                        Icon(isFavorite ? "star-filled" : "star", size: 12)
+                            .foregroundStyle(isFavorite ? Brand.warning : Brand.muted)
                     }
                     .buttonStyle(DockIconButtonStyle(size: 22))
-                    .help(project.isFavorite ? "Remove from Favorites" : "Add to Favorites")
+                    .help(isFavorite ? "Remove from Favorites" : "Add to Favorites")
                     if rt.status != .starting {
                         Button { active ? model.stop(project.id) : model.start(project.id) } label: {
                             Icon(active ? "square" : "play", size: 12)
@@ -293,7 +295,8 @@ struct SidebarContextMenu: View {
     var body: some View {
         let active = model.runtime(project.id).status.isActive
         Button(active ? "Stop" : "Start") { active ? model.stop(project.id) : model.start(project.id) }
-        Button(project.isFavorite ? "Remove from Favorites" : "Add to Favorites") { model.setFavorite(project.id, !project.isFavorite) }
+        let isFavorite = model.project(project.id)?.isFavorite ?? project.isFavorite
+        Button(isFavorite ? "Remove from Favorites" : "Add to Favorites") { model.setFavorite(project.id, !isFavorite) }
         Button("Reveal in Finder") { model.reveal(project.id) }
         Divider()
         Button(project.hidden ? "Show Project" : "Hide Project") { model.setHidden(project.id, !project.hidden) }
