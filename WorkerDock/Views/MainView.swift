@@ -225,19 +225,24 @@ struct SidebarRow: View {
         let info = model.info(project.id)
         let active = rt.status.isActive
         HStack(spacing: Space.m) {
-            KindIcon(badge: ProjectKind.primary(info), size: IconSize.md)
-                .foregroundStyle(project.hidden ? Brand.faint : (active ? Brand.text : Brand.muted))
-                .frame(width: IconSize.md)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(model.displayName(project))
-                    .font(.dBodyMedium)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .foregroundStyle(project.hidden ? Brand.muted : Brand.text)
-                Text(subtitle(rt, info))
-                    .font(.dCaption).foregroundStyle(Brand.muted).lineLimit(1)
+            // Only this part selects the row. The buttons on the right take their own clicks, so the star can't be swallowed.
+            HStack(spacing: Space.m) {
+                KindIcon(badge: ProjectKind.primary(info), size: IconSize.md)
+                    .foregroundStyle(project.hidden ? Brand.faint : (active ? Brand.text : Brand.muted))
+                    .frame(width: IconSize.md)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(model.displayName(project))
+                        .font(.dBodyMedium)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .foregroundStyle(project.hidden ? Brand.muted : Brand.text)
+                    Text(subtitle(rt, info))
+                        .font(.dCaption).foregroundStyle(Brand.muted).lineLimit(1)
+                }
+                Spacer(minLength: Space.xs)
             }
-            Spacer(minLength: Space.xs)
+            .contentShape(Rectangle())
+            .onTapGesture { model.selection = project.id }
             if hover {
                 HStack(spacing: 2) {
                     Button { model.setFavorite(project.id, !project.isFavorite) } label: {
@@ -264,8 +269,6 @@ struct SidebarRow: View {
         .padding(.horizontal, Space.m).padding(.vertical, 6)
         .background(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
             .fill(selected ? Brand.selection : (hover ? Brand.hover : .clear)))
-        .contentShape(Rectangle())
-        .onTapGesture { model.selection = project.id }
         .onHover { inside in
             if inside { hoveredID = project.id } else if hoveredID == project.id { hoveredID = nil }
         }
