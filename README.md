@@ -1,37 +1,53 @@
 # WorkerDock
 
-A native macOS app (Swift + SwiftUI) for managing all your local Cloudflare Workers / Wrangler projects in one place: discover them, start and stop them, watch their logs, and browse their local data.
+**One window for all your local Cloudflare Workers projects.** A native, fast macOS app (Swift and SwiftUI) that finds every
+Workers, Pages and Astro/Vite project on your Mac, starts and stops them, streams their logs, shows what each one is wired
+to, and lives in your menu bar.
+
+[Website](https://workerdock.app) · [Download](https://workerdock.app) · [Docs](_docs/README.md) · [Report a bug](../../issues/new?template=bug_report.yml) · [Request a feature](../../issues/new?template=feature_request.yml)
 
 > WorkerDock is an independent project and is not affiliated with or endorsed by Cloudflare.
 
-> Full project documentation (architecture, design system, release and update process, third-party tools, decisions) is in [`_docs/`](_docs/README.md).
-
 ## What it does
 
-- **Finds your projects**: add root folders (e.g. `~/Sites`); it scans for `wrangler.toml`, `wrangler.json`, `wrangler.jsonc` (skipping `node_modules`, `.wrangler`, `.git`, `dist`, `.output`, `.next`). You can also add a single project folder, and hide or remove projects.
-- **Runs them**: plain `wrangler dev`, Cloudflare Vite plugin projects (`<pm> run dev`), or any custom command. Package manager is detected from the lockfile. Each project runs in its own process group, so stopping it also stops `workerd`.
-- **Logs**: live stdout/stderr, ANSI stripped, 5,000-line ring buffer, filter (⌘F), clear, auto-scroll.
-- **Explorer**: embeds Wrangler's built-in Local Explorer (`/cdn-cgi/explorer`) for D1/KV/R2/Durable Objects/Workflows. Needs Wrangler 4.82.1+ (or Vite plugin 1.32.0+). Older versions get the exact update command.
-- **Overview**: bindings parsed from config (names only, never values), versions, port, run mode, memory.
-- **Menu bar**: start/stop toggles, open in browser / Explorer, stop all. The app keeps running from the menu bar when the window is closed.
-- **Detects projects started from a terminal** (workerd processes matched to projects by working directory).
+- **Finds your projects.** Add a folder like `~/Sites`; it scans for `wrangler.toml`, `wrangler.json` and `wrangler.jsonc`
+  (skipping `node_modules`, `.wrangler`, `.git`, `dist` and similar). Hide, remove or favorite projects.
+- **Knows what each one is.** Astro, Nuxt, Next.js, SvelteKit, Remix, React Router, VitePress, Docusaurus, Gatsby, EmDash,
+  Pages, Vite plugin, plain Worker, with the right icon and the right start command.
+- **Starts and stops them cleanly.** Each project runs in its own process group, so stopping it also stops `workerd`. Free
+  ports are picked for you, and a port clash tells you who has the port and offers "Start on a free port".
+- **Shows the wiring.** D1, KV, R2, queues, Durable Objects, workflows, service bindings, AI and more as a diagram or a
+  list. Variable *names* only, never values.
+- **Logs you can use.** Live output with colour, filter, follow, and normal text selection and copy.
+- **Local Explorer built in.** Browse local D1, KV, R2, Durable Object and Workflow data (needs Wrangler 4.82.1+ or the
+  Cloudflare Vite plugin 1.32.0+).
+- **Menu bar control.** Start, stop, restart and open sites without switching windows.
+- **Light on memory.** Native, no Electron. Each running project shows its real memory use.
+- **Updates itself** with [Sparkle](https://sparkle-project.org).
 
-It never writes to your project folders (it shows the install command when dependencies are missing, and leaves running it to you), never modifies wrangler config, and never shows `vars` or `.dev.vars` values.
+## Principles
 
-## Design
+1. **Read-only toward your projects.** It never writes to a project folder, never edits your Wrangler config and never
+   installs anything. When dependencies are missing it shows the command and leaves running it to you.
+2. **Secrets stay secret.** Variable names appear, values from `vars` and `.dev.vars` never do.
+3. **Private.** Everything runs on your Mac. The only network call is the update check.
+4. **Native and quiet.** Flat design, plain wording, nothing that nags.
 
-Colours come from the Webtions / SVG Ready design tokens (cream `#FFFDF9` and near-black `#0A0A0A` backgrounds, coral accent `#FF3253`, amber `#FFB500` highlight in dark mode) and follow the system light/dark setting. Icons are [Lucide](https://lucide.dev) (ISC licence, see `WorkerDock/Resources/LUCIDE-LICENSE.txt`), bundled as vector assets. The bindings diagram on the Overview tab mirrors Cloudflare's Worker-to-resources view, and its connections animate while a project runs. The app icon is drawn in code (`AppIconArt.swift`); the 1024px master is in `tools/icon/`.
+Feature requests are judged against these. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Requirements
+## Install
 
-- macOS 14+, Xcode 15+ (developed on Xcode 26)
-- [XcodeGen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`
+Download the latest signed and notarised build from <https://workerdock.app>, open the `.dmg` and drag WorkerDock to
+Applications. Requires macOS 14 (Sonoma) or later.
 
-## Build and run
+## Build from source
+
+You need macOS 14+, Xcode 15+ (developed on a current Xcode) and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 
 ```bash
+brew install xcodegen
 xcodegen generate
-open WorkerDock.xcodeproj      # then press ⌘R in Xcode
+open WorkerDock.xcodeproj      # then press ⌘R
 ```
 
 Or from the command line:
@@ -42,45 +58,43 @@ xcodebuild -project WorkerDock.xcodeproj -scheme WorkerDock -configuration Debug
 xcodebuild -project WorkerDock.xcodeproj -scheme WorkerDock -destination 'platform=macOS' test
 ```
 
-The built app is in `~/Library/Developer/Xcode/DerivedData/WorkerDock-*/Build/Products/Debug/WorkerDock.app`.
-
-The Xcode project is generated from `project.yml` and is not committed.
+The Xcode project is generated from `project.yml` and is not committed. A build you make yourself is unsigned for
+distribution and doesn't update itself. See [_docs/development.md](_docs/development.md) for demo mode, debug switches
+and conventions.
 
 ## Keyboard shortcuts
 
 | Shortcut | Action |
 |---|---|
-| ⌘↩ | Start selected project |
+| ⌘↩ | Start the selected project |
 | ⌘R | Restart |
 | ⌘. | Stop |
-| ⌘F | Search logs |
+| ⌘F | Find in logs |
 | ⇧⌘R | Rescan folders |
+| ⌘, | Settings |
 
-## Where things are stored
+## Where it stores things
 
-`~/Library/Application Support/WorkerDock/`: `registry.json` (folders, projects, ports, per-project run settings), `settings.json` (editor command, Node override, folder watching) and `running.json` (processes started by the app, used to offer cleanup after a crash).
+`~/Library/Application Support/WorkerDock/` holds `registry.json` (folders, projects, per-project run settings),
+`settings.json` (theme, terminal and editor, Node override, login item) and `running.json` (processes it started, used to
+offer cleanup after a crash). Nothing is written to your project folders.
 
-## Renaming the app
+## Documentation
 
-Change the name in `project.yml` (`name`, `PRODUCT_NAME`, bundle ID), `AppInfo.name` / `AppInfo.supportDirName` in `WorkerDock/Models/Models.swift`, and rename the `WorkerDock/` folder references in `project.yml`. Then run `xcodegen generate`.
+Everything else is in [`_docs/`](_docs/README.md): architecture, design system, development, how releases and updates
+work, third-party tools and the reasons behind decisions.
 
-## Layout
+## Contributing
 
-```
-project.yml                 XcodeGen spec
-WorkerDock/
-  App/                      App entry, menu bar, quit handling
-  Core/                     AppModel, persistence, login-shell environment
-  Discovery/                Scanner, TOML/JSON/JSONC parser, inspector, FSEvents watcher
-  Process/                  ProcessManager (actor), ports, output parsing, libproc, running detection
-  Models/                   Project, bindings, runtime state
-  Views/                    SwiftUI views
-WorkerDockTests/            Unit tests (parsing, discovery, real process-group tests)
-```
+Bug reports, ideas and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first, and the
+[Code of Conduct](CODE_OF_CONDUCT.md). To report a security problem, see [SECURITY.md](SECURITY.md).
 
-## Known limitations (v1)
+## License
 
-- Distribution needs a Developer ID certificate + notarization (the project builds with ad-hoc signing; sandbox is off by design).
-- Logs can't be captured for projects started outside the app.
-- For terminal-started projects the port is inferred from workerd's listening sockets.
-- Out of scope for v1 (architecture is ready): deploys, D1 migrations UI, `.dev.vars` editor, `project.test` domains, request inspector sidecar, multi-worker sessions.
+The code is released under the [MIT License](LICENSE). The WorkerDock name, the Webtions logomark and the app icon are not
+covered by that licence; see [TRADEMARKS.md](TRADEMARKS.md). Third-party components and their licences are listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+---
+
+Built by [Webtions](https://webtions.com).

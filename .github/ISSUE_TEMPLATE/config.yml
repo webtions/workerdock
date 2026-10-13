@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Website, downloads and roadmap
+    url: https://workerdock.app
+    about: Download the latest build and see what is planned. For security problems, do not open an issue; see SECURITY.md.

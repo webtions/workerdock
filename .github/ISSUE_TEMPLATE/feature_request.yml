@@ -1,0 +1,50 @@
+name: Feature request
+description: Suggest an idea or an improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Good requests describe a **problem** first. WorkerDock stays read-only toward projects, private and quiet: see [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#requesting-a-feature).
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: What's hard or annoying today? How often does it happen?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like WorkerDock to do?
+      description: Your idea, in a few sentences. Mock-ups and sketches are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What do you do today instead?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+  - type: dropdown
+    id: writes
+    attributes:
+      label: Would it change anything in a project folder or its config?
+      description: WorkerDock never does this by default. Be honest, it helps us design a safe version.
+      options:
+        - "No, read-only"
+        - "Yes (explain above)"
+        - "Not sure"
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and the roadmap on workerdock.app
+          required: true
+        - label: This is one idea, not several
+          required: true

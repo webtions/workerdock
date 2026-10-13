@@ -21,7 +21,7 @@
 ## Services
 | Service | Use | Status |
 |---|---|---|
-| workerdock.app website | Marketing site, download, update feed | Repo: `~/Herd/workerdock-site` (Astro). Hosted as Cloudflare Workers with static assets; a Worker handles `POST /api/subscribe` and stores emails in D1 (`workerdock-subscribers`) |
+| workerdock.app website | Marketing site, download, update feed | Repo: the separate website repository (`workerdock-site`) (Astro). Hosted as Cloudflare Workers with static assets; a Worker handles `POST /api/subscribe` and stores emails in D1 (`workerdock-subscribers`) |
 | Creem.io | Optional pay-what-you-want "Support WorkerDock" product (merchant of record, 3.9% + 40¢ per sale stated on its site; verify add-on fees) | Planned. Needs the checkout URL in `AppInfo.supportURL` |
 | Cloudflare R2 | Possible host for the `.dmg` | Undecided; the site's `public/download/` works too |
 | Webtions Analytics | Site analytics (`dash.webtions.com`) | On the website only, never in the app |

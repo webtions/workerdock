@@ -6,3 +6,4 @@ xcuserdata/
 .swiftpm/
 WorkerDock/Info.plist
 marketing/video/*.mp4
+marketing/video/assets/ClashDisplay-Variable.ttf

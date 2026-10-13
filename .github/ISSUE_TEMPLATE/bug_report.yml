@@ -1,0 +1,73 @@
+name: Bug report
+description: Something doesn't work the way it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Please search existing issues first. **Remove anything private** (tokens, customer data) from logs and screenshots.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Add the folder ...
+        2. Start the project ...
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: WorkerDock version
+      description: WorkerDock menu > About WorkerDock
+      placeholder: "0.1.0 (1)"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "macOS 14.5"
+    validations:
+      required: true
+  - type: input
+    id: wrangler
+    attributes:
+      label: Wrangler version and package manager
+      description: Shown in the project's Details (Wrangler, Package manager).
+      placeholder: "wrangler 4.82.1, pnpm"
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Project type
+      options:
+        - Plain Worker
+        - Pages
+        - Astro
+        - EmDash
+        - Vite plugin / other framework
+        - Custom command
+        - Not sure
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste relevant lines from the project's Logs tab, or drag in a screenshot. Remove secrets first.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues
+          required: true
+        - label: I removed private information from anything I pasted
+          required: true
