@@ -19,11 +19,7 @@ struct AboutView: View {
             }
             Divider().overlay(Brand.borderSoft)
             VStack(spacing: Space.xs) {
-                HStack(spacing: 4) {
-                    Text("Open source under the")
-                    Link("MIT License", destination: AppInfo.licenseURL)
-                    Text("· © 2026 Webtions OÜ")
-                }
+                Text("MIT License · © 2026 Webtions OÜ")
                 Text("Icons by Lucide (ISC). Framework logos are trademarks of their owners and only identify the framework a project uses.")
                 Text("\(AppInfo.name) is an independent project and is not affiliated with or endorsed by Cloudflare.")
             }
