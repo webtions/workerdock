@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+- Fixed: a project favorited with its star could not be removed from Favorites afterwards. The star showed empty and did nothing.
+- New installer window: a designed background with an arrow from WorkerDock to Applications and a short first-launch hint.
+- About window: the licence is shown as plain text.
+
 ## 0.1.1
 - Fixed: a project marked as a favorite could not be removed from Favorites.
 

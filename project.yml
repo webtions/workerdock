@@ -34,8 +34,8 @@ targets:
       properties:
         CFBundleName: WorkerDock
         CFBundleDisplayName: WorkerDock
-        CFBundleShortVersionString: "0.1.1"
-        CFBundleVersion: "2"
+        CFBundleShortVersionString: "0.1.2"
+        CFBundleVersion: "3"
         LSMinimumSystemVersion: "14.0"
         SUFeedURL: "https://workerdock.app/appcast.xml"
         SUEnableAutomaticChecks: true
