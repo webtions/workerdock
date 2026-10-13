@@ -1,9 +1,11 @@
 # Changelog
 
+## 0.1.1
+- Fixed: a project marked as a favorite could not be removed from Favorites.
+
 ## 0.1.0 (first release build)
 - New app icon from the Webtions mark: white tile with a black mark (light style), black tile with a white mark (dark and tinted styles). Menu bar uses the same mark.
 - Overview, header, sidebar (favorites, search), bindings diagram/list, selectable logs, port-conflict help, terminal and editor choice, appearance setting, open at login, About window, automatic updates (Sparkle).
-- WorkerDock no longer installs dependencies. The "dependencies not installed" banner shows the command with Copy and Open Terminal, and Start is disabled until they are installed.
 - WorkerDock no longer installs dependencies. The "dependencies not installed" banner shows the command with Copy and Open Terminal, and Start is disabled until they are installed.
 
 ## M4: Explorer, detection, memory, polish
