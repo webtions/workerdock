@@ -175,5 +175,5 @@ SOFTWARE.
 ## Simple Icons (framework logos)
 <https://simpleicons.org>, CC0 1.0. Used for: Astro, Nuxt, Next.js, Svelte, Remix, React Router, VitePress, Docusaurus, Gatsby. The logos themselves remain trademarks of their owners (see [TRADEMARKS.md](TRADEMARKS.md)).
 
-## Clash Display (promo videos only)
-Used in the marketing videos in `marketing/video/`, not in the app. Check the font's licence before redistributing the video sources.
+## Bricolage Grotesque and IBM Plex Mono (promo videos only)
+Used in the marketing videos in `marketing/video/`, not in the app. Both are open-source fonts under the SIL Open Font Licence 1.1.
