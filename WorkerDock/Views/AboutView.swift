@@ -12,6 +12,7 @@ struct AboutView: View {
                 .font(.dBody).foregroundStyle(Brand.muted).multilineTextAlignment(.center)
             HStack(spacing: Space.s) {
                 Link(destination: AppInfo.website) { Text("Website") }.buttonStyle(.dockSecondary)
+                Link(destination: AppInfo.sourceURL) { Text("Source") }.buttonStyle(.dockSecondary)
                 if let support = AppInfo.supportURL {
                     Link(destination: support) { Label { Text("Support \(AppInfo.name)") } icon: { Icon("heart", size: IconSize.sm) } }
                         .buttonStyle(.dockPrimary)
@@ -19,6 +20,11 @@ struct AboutView: View {
             }
             Divider().overlay(Brand.borderSoft)
             VStack(spacing: Space.xs) {
+                HStack(spacing: 4) {
+                    Text("Open source under the")
+                    Link("MIT License", destination: AppInfo.licenseURL)
+                    Text("· © 2026 Webtions OÜ")
+                }
                 Text("Icons by Lucide (ISC). Framework logos are trademarks of their owners and only identify the framework a project uses.")
                 Text("\(AppInfo.name) is an independent project and is not affiliated with or endorsed by Cloudflare.")
             }

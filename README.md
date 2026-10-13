@@ -6,6 +6,8 @@ to, and lives in your menu bar.
 
 [Website](https://workerdock.app) · [Download](https://workerdock.app) · [Docs](_docs/README.md) · [Report a bug](../../issues/new?template=bug_report.yml) · [Request a feature](../../issues/new?template=feature_request.yml)
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) ![Platform: macOS 14+](https://img.shields.io/badge/macOS-14%2B-lightgrey) ![Swift](https://img.shields.io/badge/Swift-SwiftUI-orange)
+
 > WorkerDock is an independent project and is not affiliated with or endorsed by Cloudflare.
 
 ## What it does
@@ -91,7 +93,7 @@ Bug reports, ideas and pull requests are welcome. Please read [CONTRIBUTING.md](
 
 ## License
 
-The code is released under the [MIT License](LICENSE). The WorkerDock name, the Webtions logomark and the app icon are not
+The code is released under the [MIT License](LICENSE), copyright © 2026 Webtions OÜ. The WorkerDock name, the Webtions logomark and the app icon are not
 covered by that licence; see [TRADEMARKS.md](TRADEMARKS.md). Third-party components and their licences are listed in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 

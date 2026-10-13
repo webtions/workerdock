@@ -9,6 +9,8 @@ enum AppInfo {
     static let minExplorerVitePlugin = SemVer("1.32.0")!
     static let explorerPath = "/cdn-cgi/explorer"
     static let website = URL(string: "https://workerdock.app")!
+    static let sourceURL = URL(string: "https://github.com/webtions/workerdock")!
+    static let licenseURL = URL(string: "https://github.com/webtions/workerdock/blob/main/LICENSE")!
     /// Optional "support the project" page. Leave nil until the checkout link exists; the UI hides the button.
     static let supportURL: URL? = nil
 
