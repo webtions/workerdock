@@ -29,11 +29,9 @@ to, and lives in your menu bar.
 
 ## Principles
 
-1. **Read-only toward your projects.** It never writes to a project folder, never edits your Wrangler config and never
-   installs anything. When dependencies are missing it shows the command and leaves running it to you.
-2. **Secrets stay secret.** Variable names appear, values from `vars` and `.dev.vars` never do.
-3. **Private.** Everything runs on your Mac. The only network call is the update check.
-4. **Native and quiet.** Flat design, plain wording, nothing that nags.
+1. **Secrets stay secret.** Variable names appear, values from `vars` and `.dev.vars` never do.
+2. **Private.** Everything runs on your Mac. The only network call is the update check.
+3. **Native and quiet.** Flat design, plain wording, nothing that nags.
 
 Feature requests are judged against these. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -79,7 +77,7 @@ and conventions.
 
 `~/Library/Application Support/WorkerDock/` holds `registry.json` (folders, projects, per-project run settings),
 `settings.json` (theme, terminal and editor, Node override, login item) and `running.json` (processes it started, used to
-offer cleanup after a crash). Nothing is written to your project folders.
+offer cleanup after a crash).
 
 ## Documentation
 

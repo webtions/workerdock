@@ -36,13 +36,11 @@ project, not affiliated with or endorsed by Cloudflare. Published by Webtions OÃ
 The package manager (npm, pnpm, yarn, bun) is detected from the lockfile.
 
 ## Principles
-1. **Read-only toward projects.** It never writes to a project folder, never changes wrangler config and never
-   installs anything. (The earlier Install button was removed on purpose; the website promises "read-only".)
-2. **Secrets stay secret.** Only variable *names* are shown, never values from `vars` or `.dev.vars`.
-3. **Private.** Everything runs on the Mac. The only network use is the update check (Sparkle) and the
+1. **Secrets stay secret.** Only variable *names* are shown, never values from `vars` or `.dev.vars`.
+2. **Private.** Everything runs on the Mac. The only network use is the update check (Sparkle) and the
    embedded Local Explorer on localhost.
-4. **Native and light.** SwiftUI/AppKit, no Electron.
-5. **Flat design, plain wording.** See [design-system.md](design-system.md).
+3. **Native and light.** SwiftUI/AppKit, no Electron.
+4. **Flat design, plain wording.** See [design-system.md](design-system.md).
 
 ## Requirements
 macOS 14 (Sonoma) or later, Apple silicon or Intel (universal build). Node/Wrangler are the user's own; the

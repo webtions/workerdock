@@ -12,7 +12,7 @@ Include what you found, how to reproduce it, the WorkerDock and macOS versions, 
 reply within a few days, agree on a fix and timeline, and credit you if you wish.
 
 ## What counts
-Things we want to hear about include: the app writing to a project folder or Wrangler config, showing secret values from
+Things we want to hear about include: showing secret values from
 `vars` or `.dev.vars`, running or being made to run unintended commands, unsafe handling of project paths or process
 output, problems in the update mechanism, and anything that sends data off your Mac other than the update check.
 

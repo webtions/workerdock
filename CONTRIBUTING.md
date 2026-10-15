@@ -4,8 +4,7 @@ Thanks for wanting to help. WorkerDock is a small, focused app, and the way to k
 explains how to report problems, ask for features and send code.
 
 ## Before you start
-- Read the [principles in the README](README.md#principles). The big one: **WorkerDock never writes to a project folder,
-  never edits Wrangler config and never installs anything.** Changes that break these won't be accepted.
+- Read the [principles in the README](README.md#principles).
 - Search the [existing issues](../../issues) first. Your bug or idea may already be there; add a 👍 or a comment.
 - Be kind. See the [Code of Conduct](CODE_OF_CONDUCT.md).
 
@@ -23,8 +22,7 @@ Use the **Feature request** form: [new feature request](../../issues/new?templat
 To make a request easy to say yes to:
 1. **Describe the problem first**, then your idea. "I lose track of which Worker uses port 8787" beats "add a port table".
 2. Say how often it happens and what you do today instead.
-3. Check it against the principles: read-only, private, native and quiet. If it needs write access to a project, say why
-   and what the safest version would be.
+3. Check it against the principles in the README: private, native and quiet.
 4. One idea per request.
 
 What happens next: we label it, ask questions if needed, and decide whether it fits. A "no" usually means "not in scope",

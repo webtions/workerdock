@@ -49,4 +49,3 @@ writes a status report (this runs the project's real dev script, which may write
   `workerd` processes behind (the app then shows a "found projects still running" prompt).
 - UI changes follow [design-system.md](design-system.md). Verify in light mode; dark mode is supported but is
   not the focus.
-- Never add a feature that writes to a project folder.

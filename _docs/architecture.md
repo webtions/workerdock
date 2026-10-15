@@ -31,7 +31,7 @@ Tests are in `WorkerDockTests/` (28 tests: parsing, process management, discover
 (package manager), installed Wrangler/Vite plugin versions, framework/CMS markers, and decides the run mode.
 
 **Starting a project.** `AppModel.startAsync` checks dependencies are installed (otherwise shows the install
-command, never installs), allocates a port and inspector port (`PortAllocator`, from 8787 / 9230), builds the
+command), allocates a port and inspector port (`PortAllocator`, from 8787 / 9230), builds the
 command for the run mode, and asks `ProcessManager` to spawn it with `posix_spawn` in its own process group,
 using the login-shell environment (`ShellEnvironment`). Output lines go to `handleLine`, which appends to the
 ring buffer (5,000 lines, ANSI stripped), detects "Ready on http://..." (marks Running and records the URL),
@@ -73,7 +73,7 @@ unless `WORKERDOCK_UPDATER=1`.
   editor choice, Node path, shell environment.
 - `MenuBarContent`: the menu bar menu. `AboutView`: About window.
 
-## Where data lives (nothing in project folders)
+## Where data lives
 `~/Library/Application Support/WorkerDock/`
 - `registry.json`: root folders and projects (including hidden, favourite, port, run-mode override, custom command).
   Optional fields are optional so older files keep loading.

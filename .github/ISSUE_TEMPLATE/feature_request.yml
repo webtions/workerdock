@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Good requests describe a **problem** first. WorkerDock stays read-only toward projects, private and quiet: see [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#requesting-a-feature).
+        Good requests describe a **problem** first. WorkerDock stays private and quiet: see [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#requesting-a-feature).
   - type: textarea
     id: problem
     attributes:
@@ -28,17 +28,6 @@ body:
     id: alternatives
     attributes:
       label: Alternatives you considered
-  - type: dropdown
-    id: writes
-    attributes:
-      label: Would it change anything in a project folder or its config?
-      description: WorkerDock never does this by default. Be honest, it helps us design a safe version.
-      options:
-        - "No, read-only"
-        - "Yes (explain above)"
-        - "Not sure"
-    validations:
-      required: true
   - type: checkboxes
     id: checks
     attributes:
