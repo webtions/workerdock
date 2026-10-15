@@ -16,13 +16,12 @@
 | [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`) | Generates `WorkerDock.xcodeproj` from `project.yml` |
 | Xcode + command line tools | Build, test, archive, `codesign`, `xcrun notarytool`, `xcrun stapler`, `hdiutil`, `spctl` |
 | Sparkle tools (inside the package artifacts) | `generate_keys` (create/export the update key), `generate_appcast` (sign the update and write the feed). Found under `~/Library/Developer/Xcode/DerivedData/WorkerDock-*/SourcePackages/artifacts/sparkle/Sparkle/bin/` |
-| Apple Developer Program | Developer ID certificate, notarisation (team `6A83PFAKPU`) |
+| Apple Developer Program | Developer ID certificate and notarisation |
 
 ## Services
 | Service | Use | Status |
 |---|---|---|
 | workerdock.app website | Marketing site, download, update feed | Repo: the separate website repository (`workerdock-site`) (Astro). Hosted as Cloudflare Workers with static assets; a Worker handles `POST /api/subscribe` and stores emails in D1 (`workerdock-subscribers`) |
-| Creem.io | Optional pay-what-you-want "Support WorkerDock" product (merchant of record, 3.9% + 40¢ per sale stated on its site; verify add-on fees) | Planned. Needs the checkout URL in `AppInfo.supportURL` |
 | Cloudflare R2 | Possible host for the `.dmg` | Undecided; the site's `public/download/` works too |
 | Webtions Analytics | Site analytics (`dash.webtions.com`) | On the website only, never in the app |
 

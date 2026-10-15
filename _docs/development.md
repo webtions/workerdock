@@ -50,3 +50,13 @@ writes a status report (this runs the project's real dev script, which may write
 - UI changes follow [design-system.md](design-system.md). Verify in light mode; dark mode is supported but is
   not the focus.
 - Never add a feature that writes to a project folder.
+
+## The installer window
+`scripts/make-dmg.sh <WorkerDock.app> <output.dmg>` builds the installer disk image: a fixed-size window with a designed
+background (title, arrow from the app to Applications, a first-launch hint), icons placed on either side of the arrow and
+the app icon as the disk icon.
+- The artwork is `tools/dmg/background.html`. Run `tools/dmg/build-background.sh` after editing it to regenerate
+  `background.tiff` (needs Google Chrome).
+- The layout is set through Finder with AppleScript, so macOS may ask once to let the terminal control Finder. Choose Allow.
+- Finder shows its tab bar and path bar if the person has them switched on, which can add a scrollbar. That is a Finder
+  setting on their Mac, not part of the image.

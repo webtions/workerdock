@@ -56,7 +56,7 @@ running project on the same port if we know one. The Overview shows a banner wit
 which restarts with `--port N` passed through (`PackageManager.runDev(port:)`).
 
 **Updates.** `AppUpdater` wraps Sparkle's `SPUStandardUpdaterController`. Disabled in debug builds and tests
-unless `WORKERDOCK_UPDATER=1`. See [release-and-updates.md](release-and-updates.md).
+unless `WORKERDOCK_UPDATER=1`.
 
 ## UI structure
 - `MainView`: `NavigationSplitView`. Sidebar (search, Favorites / Running / Stopped, footer with Add and
@@ -81,7 +81,7 @@ unless `WORKERDOCK_UPDATER=1`. See [release-and-updates.md](release-and-updates.
 - `running.json`: PIDs started by the app (for crash recovery).
 
 Other state: UI preferences in `UserDefaults` (domain `dev.workerdock.app`, e.g. bindings layout, window
-frame), the Sparkle signing key and notary credentials in the Keychain (developer's Mac only).
+frame).
 
 ## Environment variables (debug and tests)
 | Variable | Effect |

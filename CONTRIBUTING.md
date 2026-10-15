@@ -60,5 +60,5 @@ Contributions must not add new Webtions or WorkerDock marks, and the name, logo 
 [TRADEMARKS.md](TRADEMARKS.md).
 
 ## Releases
-Releases are built and signed by the maintainer (see [_docs/release-and-updates.md](_docs/release-and-updates.md)). Pull
+Releases are built and signed by the maintainer. Pull
 requests don't need to touch version numbers or the update feed.

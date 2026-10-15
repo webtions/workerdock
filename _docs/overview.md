@@ -48,6 +48,5 @@ The package manager (npm, pnpm, yarn, bun) is detected from the lockfile.
 macOS 14 (Sonoma) or later, Apple silicon or Intel (universal build). Node/Wrangler are the user's own; the
 app reads the login-shell environment to find them.
 
-## Business model
-Free download. Optional "Support WorkerDock" pay-what-you-want product on Creem.io (planned; the button is
-hidden until `AppInfo.supportURL` is set). No licence keys, no paywall. See [decisions.md](decisions.md).
+## Price
+Free.

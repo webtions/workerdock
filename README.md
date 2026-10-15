@@ -83,8 +83,7 @@ offer cleanup after a crash). Nothing is written to your project folders.
 
 ## Documentation
 
-Everything else is in [`_docs/`](_docs/README.md): architecture, design system, development, how releases and updates
-work, third-party tools and the reasons behind decisions.
+Everything else is in [`_docs/`](_docs/README.md): architecture, design system, development and third-party tools.
 
 ## Contributing
 
