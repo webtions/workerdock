@@ -97,23 +97,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.windows.forEach { $0.close() }
             return
         }
-        if let dir = ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_ICON"] {
-            NSApp.setActivationPolicy(.prohibited)
-            Task { @MainActor in
-                try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
-                let renderer = ImageRenderer(content: AppIconArt())
-                renderer.scale = 1
-                renderer.isOpaque = false
-                if let cg = renderer.cgImage {
-                    let rep = NSBitmapImageRep(cgImage: cg)
-                    try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir + "/icon-1024.png"))
-                } else {
-                    try? "render failed".write(toFile: dir + "/error.txt", atomically: true, encoding: .utf8)
-                }
-                exit(0)
-            }
-            return
-        }
         if ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_SNAPSHOT"] != nil {
             NSApp.setActivationPolicy(ProcessInfo.processInfo.environment["WORKERDOCK_DEBUG_ACTIVE"] != nil ? .regular : .accessory)
         }
