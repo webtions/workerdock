@@ -1,29 +1,20 @@
-# Third-party tools, libraries, assets and services
+# Third-party tools, libraries and assets
 
 ## In the app (shipped)
 | Name | Use | Licence | Notes |
 |---|---|---|---|
-| [Sparkle](https://github.com/sparkle-project/Sparkle) 2.x (resolved 2.10.0) | Automatic updates | MIT-style | Swift package. Helper tools are re-signed at release. Docs: sparkle-project.org |
+| [Sparkle](https://github.com/sparkle-project/Sparkle) 2.x (resolved 2.10.0) | Automatic updates | MIT-style | Swift package. Docs: sparkle-project.org |
 | [TOMLKit](https://github.com/LebJe/TOMLKit) 0.6+ | Parse `wrangler.toml` | MIT | Swift package |
 | [Lucide](https://lucide.dev) | UI icons (bundled as template SVGs) | ISC | Notice in `WorkerDock/Resources/LUCIDE-LICENSE.txt` and About window |
 | [Simple Icons](https://simpleicons.org) (v13.21.0 via jsDelivr) | Framework logos: Astro, Nuxt, Next.js, Svelte, Remix, React Router, VitePress, Docusaurus, Gatsby | CC0 | Logos remain trademarks of their owners; used only to identify the framework |
 | EmDash mark | Derived from the official favicon at emdashcms.com/brand | Trademark of its owner | Made single-colour so it follows light/dark |
 | Apple frameworks | SwiftUI, AppKit, WebKit (Explorer), ServiceManagement (login item), libproc, FSEvents | Apple | |
 
-## Build and release tooling (developer Mac)
+## Build tooling
 | Name | Use |
 |---|---|
 | [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`) | Generates `WorkerDock.xcodeproj` from `project.yml` |
-| Xcode + command line tools | Build, test, archive, `codesign`, `xcrun notarytool`, `xcrun stapler`, `hdiutil`, `spctl` |
-| Sparkle tools (inside the package artifacts) | `generate_keys` (create/export the update key), `generate_appcast` (sign the update and write the feed). Found under `~/Library/Developer/Xcode/DerivedData/WorkerDock-*/SourcePackages/artifacts/sparkle/Sparkle/bin/` |
-| Apple Developer Program | Developer ID certificate and notarisation |
-
-## Services
-| Service | Use | Status |
-|---|---|---|
-| workerdock.app website | Marketing site, download, update feed | Repo: the separate website repository (`workerdock-site`) (Astro). Hosted as Cloudflare Workers with static assets; a Worker handles `POST /api/subscribe` and stores emails in D1 (`workerdock-subscribers`) |
-| Cloudflare R2 | Possible host for the `.dmg` | Undecided; the site's `public/download/` works too |
-| Webtions Analytics | Site analytics (`dash.webtions.com`) | On the website only, never in the app |
+| Xcode + command line tools | Build and test |
 
 ## Things the app calls at runtime
 - The user's own `wrangler`, `npm`/`pnpm`/`yarn`/`bun`, `node` (found through the login shell environment).
