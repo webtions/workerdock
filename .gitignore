@@ -5,3 +5,6 @@ DerivedData/
 xcuserdata/
 .swiftpm/
 WorkerDock/Info.plist
+
+# Generated code map (Graphify)
+graphify-out/
